@@ -13,8 +13,9 @@ export default function Home() {
 
   async function refreshAccount() {
     const res = await fetch("/api/account?broker=ALPACA&mode=PAPER");
-    const json = await res.json();
-    if (!res.ok) { setAccountError(json.error); setAccount(null); return; }
+    let json: any = null;
+    try { json = await res.json(); } catch { /* non-JSON error body — fall through with json=null */ }
+    if (!res.ok) { setAccountError(json?.error ?? `Request failed (${res.status})`); setAccount(null); return; }
     setAccountError(null);
     setAccount(json);
   }
