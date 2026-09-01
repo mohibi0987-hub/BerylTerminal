@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { UserButton } from "@clerk/nextjs";
+import { useClerk } from "@clerk/nextjs";
 import { Chart } from "@/components/Chart";
 import { OrderTicket } from "@/components/OrderTicket";
 import { BrokerConnectModal } from "@/components/BrokerConnectModal";
 
 export default function Home() {
+  const { signOut } = useClerk();
   const [symbol, setSymbol] = useState("AAPL");
   const [showConnect, setShowConnect] = useState(false);
   const [account, setAccount] = useState<any>(null);
@@ -14,7 +15,7 @@ export default function Home() {
   async function refreshAccount() {
     const res = await fetch("/api/account?broker=ALPACA&mode=PAPER");
     let json: any = null;
-    try { json = await res.json(); } catch { /* non-JSON error body — fall through with json=null */ }
+    try { json = await res.json(); } catch { /* non-JSON error body */ }
     if (!res.ok) { setAccountError(json?.error ?? `Request failed (${res.status})`); setAccount(null); return; }
     setAccountError(null);
     setAccount(json);
@@ -41,7 +42,9 @@ export default function Home() {
           <button onClick={() => setShowConnect(true)} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--green-border)", background: "var(--green-dim)", color: "var(--green)", fontWeight: 700, fontSize: 12 }}>
             Connect broker
           </button>
-          <UserButton afterSignOutUrl="/sign-in" />
+          <button onClick={() => signOut({ redirectUrl: "/login" })} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", fontSize: 12 }}>
+            Sign out
+          </button>
         </div>
       </div>
 

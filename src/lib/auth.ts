@@ -1,3 +1,8 @@
+// Identity and session are owned by Clerk (see middleware.ts and the custom /login page built
+// on Clerk's useSignIn/useSignUp hooks). This module bridges a Clerk identity to our own
+// internal User row — our schema's foreign keys (orders, positions, broker connections) all
+// point at OUR cuid, not Clerk's user id — and manages "don't remember me" broker credentials
+// in a cookie that's deliberately independent of Clerk's own session cookie.
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { db } from "./db";
@@ -10,6 +15,9 @@ export async function getCurrentUserId(): Promise<string | null> {
   const existing = await db.user.findUnique({ where: { clerkId } });
   if (existing) return existing.id;
 
+  // First time we've seen this Clerk identity. If an account with this email already
+  // exists from before Clerk was added, link it instead of creating a duplicate — a plain
+  // create() here would violate the email uniqueness rule and crash the request.
   const cu = await currentUser();
   const email = cu?.emailAddresses?.[0]?.emailAddress ?? `${clerkId}@clerk.local`;
   const name = [cu?.firstName, cu?.lastName].filter(Boolean).join(" ") || undefined;
@@ -23,6 +31,9 @@ export async function getCurrentUserId(): Promise<string | null> {
 
 const EPHEMERAL_COOKIE = "beryl_ephemeral_brokers";
 
+// No maxAge is set on purpose: this makes it a true browser "session cookie" that disappears
+// when the browser fully closes — the closest honest equivalent to "forget when my session
+// ends" without hooking into Clerk's own sign-out internals.
 export async function getEphemeralCredentials(broker: string, mode: string): Promise<Record<string, string> | null> {
   const raw = cookies().get(EPHEMERAL_COOKIE)?.value;
   if (!raw) return null;
