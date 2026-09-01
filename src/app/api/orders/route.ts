@@ -8,7 +8,7 @@ import { submitOrder } from "@/lib/orders/orderService";
 import type { BrokerName, ExecutionMode, PlaceOrderRequest } from "@/lib/brokers/types";
 
 export async function GET(req: NextRequest) {
-  const userId = await getCurrentUserId(req);
+  const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   const orders = await db.order.findMany({
     where: { userId },
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const userId = await getCurrentUserId(req);
+  const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
   const body = await req.json();

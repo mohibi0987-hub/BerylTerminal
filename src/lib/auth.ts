@@ -1,70 +1,58 @@
-// Minimal but real session auth: scrypt password hashing (Node's crypto, no extra dependency)
-// and an HMAC-signed session cookie. This covers step 1 of the spec's recommended build order.
-// 2FA (TOTP) is modeled in the User table (twoFactorSecret/twoFactorEnabled) but not enforced
-// in the login flow yet — flagged as a follow-up, not silently skipped.
-import crypto from "crypto";
-import { NextRequest } from "next/server";
+// Identity and session are entirely owned by Clerk now (see middleware.ts and layout.tsx).
+// This module does two things:
+//   1. Bridges a Clerk identity to our own internal User row (our schema's foreign keys —
+//      orders, positions, broker connections — all point at OUR cuid, not Clerk's user id,
+//      so a matching row is created on first sight of a given Clerk user).
+//   2. Manages "don't remember me" broker credentials in a cookie that is deliberately
+//      separate from Clerk's own session cookie — we don't own Clerk's cookie format, so
+//      ephemeral broker secrets get their own small, independently-encrypted cookie instead.
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
+import { db } from "./db";
+import { encryptSecret, decryptSecret } from "./crypto";
 
-const SESSION_COOKIE = "beryl_session";
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
+export async function getCurrentUserId(): Promise<string | null> {
+  const { userId: clerkId } = await auth();
+  if (!clerkId) return null;
 
-function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) throw new Error("SESSION_SECRET is not set — generate one with `openssl rand -base64 32`.");
-  return secret;
+  const existing = await db.user.findUnique({ where: { clerkId } });
+  if (existing) return existing.id;
+
+  // First time we've seen this Clerk identity — create the matching internal row.
+  const cu = await currentUser();
+  const email = cu?.emailAddresses?.[0]?.emailAddress ?? `${clerkId}@clerk.local`;
+  const name = [cu?.firstName, cu?.lastName].filter(Boolean).join(" ") || undefined;
+  const created = await db.user.create({ data: { clerkId, email, name } });
+  return created.id;
 }
 
-export function hashPassword(password: string): string {
-  const salt = crypto.randomBytes(16);
-  const hash = crypto.scryptSync(password, salt, 64);
-  return `${salt.toString("hex")}:${hash.toString("hex")}`;
-}
+const EPHEMERAL_COOKIE = "beryl_ephemeral_brokers";
 
-export function verifyPassword(password: string, stored: string): boolean {
-  const [saltHex, hashHex] = stored.split(":");
-  const salt = Buffer.from(saltHex, "hex");
-  const expected = Buffer.from(hashHex, "hex");
-  const actual = crypto.scryptSync(password, salt, 64);
-  return crypto.timingSafeEqual(actual, expected);
-}
-
-function sign(value: string): string {
-  const mac = crypto.createHmac("sha256", getSessionSecret()).update(value).digest("hex");
-  return `${value}.${mac}`;
-}
-
-function verify(signed: string): string | null {
-  const idx = signed.lastIndexOf(".");
-  if (idx < 0) return null;
-  const value = signed.slice(0, idx);
-  const mac = signed.slice(idx + 1);
-  const expectedMac = crypto.createHmac("sha256", getSessionSecret()).update(value).digest("hex");
-  if (mac.length !== expectedMac.length || !crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(expectedMac))) {
-    return null;
-  }
-  return value;
-}
-
-// Call from a Route Handler (Server Action / Response) to log a user in.
-export function buildSessionCookie(userId: string) {
-  const payload = JSON.stringify({ userId, iat: Date.now() });
-  const token = sign(Buffer.from(payload).toString("base64url"));
-  return { name: SESSION_COOKIE, value: token, options: { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/", maxAge: SESSION_MAX_AGE_SECONDS } };
-}
-
-export async function getCurrentUserId(_req?: NextRequest): Promise<string | null> {
-  const store = cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
-  const value = verify(token);
-  if (!value) return null;
+// No maxAge is set on purpose: this makes it a true browser "session cookie" that disappears
+// when the browser fully closes — the closest honest equivalent to "forget when my session
+// ends" without hooking into Clerk's own sign-out flow (which we don't control the internals of).
+export async function getEphemeralCredentials(broker: string, mode: string): Promise<Record<string, string> | null> {
+  const raw = cookies().get(EPHEMERAL_COOKIE)?.value;
+  if (!raw) return null;
   try {
-    const payload = JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
-    return payload.userId ?? null;
+    const all = JSON.parse(decryptSecret(raw)) as Record<string, string>;
+    const blob = all[`${broker}_${mode}`];
+    return blob ? JSON.parse(blob) : null;
   } catch {
     return null;
   }
 }
 
-export const SESSION_COOKIE_NAME = SESSION_COOKIE;
+export function buildEphemeralCookie(existingRaw: string | undefined, broker: string, mode: string, credentials: Record<string, string>) {
+  let all: Record<string, string> = {};
+  if (existingRaw) {
+    try { all = JSON.parse(decryptSecret(existingRaw)); } catch { /* start fresh if corrupt */ }
+  }
+  all[`${broker}_${mode}`] = JSON.stringify(credentials);
+  const value = encryptSecret(JSON.stringify(all));
+  return { name: EPHEMERAL_COOKIE, value, options: { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/" } }; // no maxAge — session cookie
+}
+
+export function getRawEphemeralCookie(): string | undefined {
+  return cookies().get(EPHEMERAL_COOKIE)?.value;
+}

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { UserButton } from "@clerk/nextjs";
 import { Chart } from "@/components/Chart";
 import { OrderTicket } from "@/components/OrderTicket";
 import { BrokerConnectModal } from "@/components/BrokerConnectModal";
@@ -11,7 +12,7 @@ export default function Home() {
   const [accountError, setAccountError] = useState<string | null>(null);
 
   async function refreshAccount() {
-    const res = await fetch("/api/account?broker=ALPACA&mode=PAPER"); if (res.status === 401) { window.location.href = "/login"; return; }
+    const res = await fetch("/api/account?broker=ALPACA&mode=PAPER");
     const json = await res.json();
     if (!res.ok) { setAccountError(json.error); setAccount(null); return; }
     setAccountError(null);
@@ -39,6 +40,7 @@ export default function Home() {
           <button onClick={() => setShowConnect(true)} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--green-border)", background: "var(--green-dim)", color: "var(--green)", fontWeight: 700, fontSize: 12 }}>
             Connect broker
           </button>
+          <UserButton afterSignOutUrl="/sign-in" />
         </div>
       </div>
 

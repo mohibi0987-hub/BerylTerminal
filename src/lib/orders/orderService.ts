@@ -46,7 +46,11 @@ export async function submitOrder(
   await transition(db, order.id, OrderStatus.RISK_VALIDATION);
 
   const recentOrders: { clientRequestId: string }[] = await db.order.findMany({
-    where: { userId: input.userId, createdAt: { gte: new Date(Date.now() - 60_000) }, id: { not: order.id } },
+    where: {
+      userId: input.userId,
+      createdAt: { gte: new Date(Date.now() - 60_000) },
+      id: { not: order.id }, // exclude the order we just created for *this* request — otherwise it always matches itself
+    },
     select: { clientRequestId: true },
   });
   const recentIds = new Set<string>(recentOrders.map((o) => o.clientRequestId));

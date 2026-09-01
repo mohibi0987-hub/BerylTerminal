@@ -31,7 +31,7 @@ export function Chart({ symbol }: { symbol: string }) {
       })));
     }
     load();
-    const poll = setInterval(load, 15000); // real polling refresh — see README for upgrading to true WebSocket streaming
+    const poll = setInterval(load, 15000); // stays under Twelve Data's free-tier 8 req/min limit
 
     const onResize = () => chart.applyOptions({ width: containerRef.current!.clientWidth, height: containerRef.current!.clientHeight });
     window.addEventListener("resize", onResize);

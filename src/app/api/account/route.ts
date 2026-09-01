@@ -4,7 +4,7 @@ import { getBrokerAdapter } from "@/lib/brokers/registry";
 import type { BrokerName, ExecutionMode } from "@/lib/brokers/types";
 
 export async function GET(req: NextRequest) {
-  const userId = await getCurrentUserId(req);
+  const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
   const broker = (req.nextUrl.searchParams.get("broker") ?? "ALPACA") as BrokerName;

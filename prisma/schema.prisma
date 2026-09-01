@@ -14,6 +14,9 @@ enum BrokerName {
   ALPACA
   WEBULL
   IBKR
+  KRAKEN
+  COINBASE
+  TRADOVATE
 }
 
 enum BrokerConnectionStatus {
@@ -65,9 +68,10 @@ enum ExecutionMode {
 
 model User {
   id            String   @id @default(cuid())
+  clerkId       String?  @unique
   email         String   @unique
   name          String?
-  passwordHash  String
+  passwordHash  String?
   twoFactorSecret String?
   twoFactorEnabled Boolean @default(false)
   createdAt     DateTime @default(now())
@@ -119,8 +123,7 @@ model BrokerConnection {
   broker            BrokerName
   mode              ExecutionMode           @default(PAPER)
   status            BrokerConnectionStatus  @default(PENDING_AUTH)
-  encryptedApiKey   String?                 // encrypted, never returned to the frontend
-  encryptedApiSecret String?                // encrypted, never returned to the frontend
+  encryptedCredentials String?               // one encrypted JSON blob — shape varies per broker (key pair, or username+password+cid+sec, etc.), never returned to the frontend
   encryptedOAuthTokens Json?                // encrypted OAuth access/refresh tokens, if applicable
   externalAccountId String?                 // broker's own account identifier
   lastConnectedAt   DateTime?
