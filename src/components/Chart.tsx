@@ -31,7 +31,7 @@ export function Chart({ symbol }: { symbol: string }) {
       })));
     }
     load();
-    const poll = setInterval(load, 5000); // real polling refresh — see README for upgrading to true WebSocket streaming
+    const poll = setInterval(load, 15000); // real polling refresh — see README for upgrading to true WebSocket streaming
 
     const onResize = () => chart.applyOptions({ width: containerRef.current!.clientWidth, height: containerRef.current!.clientHeight });
     window.addEventListener("resize", onResize);

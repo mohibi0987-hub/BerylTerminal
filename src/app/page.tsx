@@ -11,7 +11,7 @@ export default function Home() {
   const [accountError, setAccountError] = useState<string | null>(null);
 
   async function refreshAccount() {
-    const res = await fetch("/api/account?broker=ALPACA&mode=PAPER");
+    const res = await fetch("/api/account?broker=ALPACA&mode=PAPER"); if (res.status === 401) { window.location.href = "/login"; return; }
     const json = await res.json();
     if (!res.ok) { setAccountError(json.error); setAccount(null); return; }
     setAccountError(null);
