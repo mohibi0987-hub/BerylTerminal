@@ -70,13 +70,22 @@ export class AlpacaAdapter implements BrokerAdapter {
   }
 
   private async request(path: string, init: RequestInit = {}, base = this.baseUrl) {
-    const res = await fetch(`${base}${path}`, { ...init, headers: { ...this.headers(), ...(init.headers || {}) } });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`Alpaca ${init.method || "GET"} ${path} failed: ${res.status} ${body}`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000); // stay comfortably under Vercel's serverless function time limit, which can be as short as 10s on the Hobby plan
+    try {
+      const res = await fetch(`${base}${path}`, { ...init, headers: { ...this.headers(), ...(init.headers || {}) }, signal: controller.signal });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Alpaca ${init.method || "GET"} ${path} failed: ${res.status} ${body}`);
+      }
+      if (res.status === 204) return null;
+      return res.json();
+    } catch (err: any) {
+      if (err.name === "AbortError") throw new Error(`Alpaca request to ${path} timed out after 8s.`);
+      throw err;
+    } finally {
+      clearTimeout(timeout);
     }
-    if (res.status === 204) return null;
-    return res.json();
   }
 
   async getAccount(): Promise<BrokerAccountInfo> {
