@@ -29,12 +29,14 @@ export default function LoginPage() {
         return;
       }
 
-      // A new/unrecognized device (or an account with a required second check) lands here
-      // even with the right password — Clerk asks for one more factor before finishing.
-      if (attempt.status === "needs_first_factor") {
-        const emailFactor = attempt.supportedFirstFactors?.find((f: any) => f.strategy === "email_code");
+      // A new/unrecognized device — this version's equivalent of Clerk's anti-credential-
+      // stuffing protection surfaces as needs_second_factor even without the account ever
+      // opting into MFA, since Client Trust (a dedicated status in newer Clerk versions)
+      // doesn't exist in this SDK version — same underlying check, older status name.
+      if (attempt.status === "needs_second_factor") {
+        const emailFactor = attempt.supportedSecondFactors?.find((f: any) => f.strategy === "email_code");
         if (emailFactor) {
-          await signIn.prepareFirstFactor({ strategy: "email_code", emailAddressId: (emailFactor as any).emailAddressId });
+          await signIn.prepareSecondFactor({ strategy: "email_code" });
           setVerifying(true);
           setBusy(false);
           return;
@@ -70,7 +72,7 @@ export default function LoginPage() {
     try {
       if (mode === "login") {
         if (!signInLoaded) return;
-        const attempt = await signIn.attemptFirstFactor({ strategy: "email_code", code });
+        const attempt = await signIn.attemptSecondFactor({ strategy: "email_code", code });
         if (attempt.status === "complete") {
           await setActiveSignIn({ session: attempt.createdSessionId });
           router.push("/");
