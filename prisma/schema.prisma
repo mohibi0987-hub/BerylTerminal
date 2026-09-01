@@ -1,0 +1,314 @@
+// BerylTerminal — canonical data model.
+// Targets Postgres (Supabase). Run `npx prisma migrate dev` after setting DATABASE_URL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BrokerName {
+  ALPACA
+  WEBULL
+  IBKR
+}
+
+enum BrokerConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+  PENDING_AUTH
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderType {
+  MARKET
+  LIMIT
+  STOP
+  STOP_LIMIT
+}
+
+enum TimeInForce {
+  DAY
+  GTC
+  IOC
+  FOK
+  OPG
+  CLS
+}
+
+// Mirrors the lifecycle in the spec:
+// CREATED -> RISK_VALIDATION -> {REJECTED | SUBMITTED -> BROKER_ACCEPTED -> {PARTIALLY_FILLED -> FILLED | CANCELLED}}
+enum OrderStatus {
+  CREATED
+  RISK_VALIDATION
+  REJECTED
+  SUBMITTED
+  BROKER_ACCEPTED
+  PARTIALLY_FILLED
+  FILLED
+  CANCELLED
+  ERROR
+}
+
+enum ExecutionMode {
+  PAPER
+  LIVE
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  passwordHash  String
+  twoFactorSecret String?
+  twoFactorEnabled Boolean @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workspaces        Workspace[]
+  watchlists        Watchlist[]
+  brokerConnections BrokerConnection[]
+  alerts            Alert[]
+  drawings          Drawing[]
+  indicatorConfigs  IndicatorConfiguration[]
+  auditEvents       AuditEvent[]
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  layout    Json     // saved panel/layout configuration
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Watchlist {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  items     WatchlistItem[]
+  createdAt DateTime        @default(now())
+}
+
+model WatchlistItem {
+  id           String    @id @default(cuid())
+  watchlistId  String
+  watchlist    Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+  instrumentId String
+  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+  sortOrder    Int       @default(0)
+}
+
+// One row per (user, broker) connection. Secrets are encrypted at rest — see lib/crypto.ts.
+model BrokerConnection {
+  id                String                  @id @default(cuid())
+  userId            String
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  broker            BrokerName
+  mode              ExecutionMode           @default(PAPER)
+  status            BrokerConnectionStatus  @default(PENDING_AUTH)
+  encryptedApiKey   String?                 // encrypted, never returned to the frontend
+  encryptedApiSecret String?                // encrypted, never returned to the frontend
+  encryptedOAuthTokens Json?                // encrypted OAuth access/refresh tokens, if applicable
+  externalAccountId String?                 // broker's own account identifier
+  lastConnectedAt   DateTime?
+  lastError         String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  accounts   BrokerAccount[]
+  orders     Order[]
+  auditEvents AuditEvent[]
+
+  @@unique([userId, broker, mode])
+}
+
+model BrokerAccount {
+  id                 String           @id @default(cuid())
+  brokerConnectionId String
+  brokerConnection   BrokerConnection @relation(fields: [brokerConnectionId], references: [id], onDelete: Cascade)
+  externalAccountId  String
+  accountType        String?          // e.g. "cash", "margin"
+  currency           String           @default("USD")
+  positions          Position[]
+  balanceSnapshots   BalanceSnapshot[]
+  createdAt          DateTime         @default(now())
+}
+
+model Instrument {
+  id         String   @id @default(cuid())
+  symbol     String   @unique
+  name       String?
+  assetClass String   // "equity" | "crypto" | "option" | "future" | "forex"
+  exchange   String?
+  createdAt  DateTime @default(now())
+
+  watchlistItems WatchlistItem[]
+  marketData     MarketData[]
+  orders         Order[]
+  positions      Position[]
+  drawings       Drawing[]
+}
+
+// Cached OHLCV bars — a durable cache in front of the live market-data provider, not the source of truth.
+model MarketData {
+  id           String     @id @default(cuid())
+  instrumentId String
+  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+  interval     String     // "1min" | "5min" | "1day" ...
+  timestamp    DateTime
+  open         Float
+  high         Float
+  low          Float
+  close        Float
+  volume       Float
+
+  @@unique([instrumentId, interval, timestamp])
+  @@index([instrumentId, interval, timestamp])
+}
+
+model Order {
+  id                 String            @id @default(cuid())
+  userId             String
+  brokerConnectionId String
+  brokerConnection   BrokerConnection  @relation(fields: [brokerConnectionId], references: [id])
+  instrumentId       String
+  instrument         Instrument        @relation(fields: [instrumentId], references: [id])
+  side               OrderSide
+  type               OrderType
+  timeInForce        TimeInForce       @default(DAY)
+  quantity           Float
+  limitPrice         Float?
+  stopPrice          Float?
+  status             OrderStatus       @default(CREATED)
+  mode               ExecutionMode
+  externalOrderId    String?           // broker's order id, once submitted
+  rejectReason       String?
+  clientRequestId    String            @unique // idempotency key — prevents duplicate submission
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  executions  Execution[]
+  stateEvents OrderStateEvent[]
+}
+
+// Immutable audit trail of every lifecycle transition — "all state transitions must be recorded".
+model OrderStateEvent {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus OrderStatus?
+  toStatus  OrderStatus
+  reason    String?
+  createdAt DateTime    @default(now())
+}
+
+model Execution {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id])
+  quantity   Float
+  price      Float
+  fee        Float    @default(0)
+  externalExecutionId String?
+  executedAt DateTime @default(now())
+}
+
+model Position {
+  id           String        @id @default(cuid())
+  brokerAccountId String
+  brokerAccount BrokerAccount @relation(fields: [brokerAccountId], references: [id], onDelete: Cascade)
+  instrumentId String
+  instrument   Instrument    @relation(fields: [instrumentId], references: [id])
+  quantity     Float
+  avgPrice     Float
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([brokerAccountId, instrumentId])
+}
+
+model BalanceSnapshot {
+  id              String        @id @default(cuid())
+  brokerAccountId String
+  brokerAccount   BrokerAccount @relation(fields: [brokerAccountId], references: [id], onDelete: Cascade)
+  cash            Float
+  buyingPower     Float
+  equity          Float
+  capturedAt      DateTime      @default(now())
+}
+
+model Alert {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  symbol      String
+  condition   String   // e.g. "price_above", "price_below"
+  targetValue Float
+  isActive    Boolean  @default(true)
+  triggeredAt DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model Drawing {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instrumentId String
+  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+  type         String     // "trend" | "ray" | "fib" | "rect" | "text"
+  points       Json
+  createdAt    DateTime   @default(now())
+}
+
+model IndicatorConfiguration {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String   // "sma20" | "rsi14" ...
+  params    Json
+  createdAt DateTime @default(now())
+}
+
+model Trade {
+  id                String   @id @default(cuid())
+  userId            String
+  symbol            String
+  entryOrderId      String?
+  exitOrderId       String?
+  quantity          Float
+  side              OrderSide
+  entryPrice        Float
+  exitPrice         Float?
+  pnl               Float?
+  fees              Float    @default(0)
+  openedAt          DateTime
+  closedAt          DateTime?
+  tradeBerylTradeId String?  // foreign key into the separate TradeBeryl journal system, if synced
+  chartScreenshotUrl String?
+  strategyTag       String?
+  createdAt         DateTime @default(now())
+}
+
+// Immutable audit log — required by the spec for all important trading events.
+model AuditEvent {
+  id                 String            @id @default(cuid())
+  userId             String?
+  user               User?             @relation(fields: [userId], references: [id])
+  brokerConnectionId String?
+  brokerConnection   BrokerConnection? @relation(fields: [brokerConnectionId], references: [id])
+  eventType          String            // "ORDER_SUBMITTED" | "BROKER_CONNECTED" | "RISK_REJECTED" | ...
+  payload            Json
+  createdAt          DateTime          @default(now())
+}
