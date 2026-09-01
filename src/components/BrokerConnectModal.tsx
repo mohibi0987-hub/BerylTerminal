@@ -32,9 +32,10 @@ export function BrokerConnectModal({ onClose, onConnected }: { onClose: () => vo
     activeBroker.fields.forEach((f) => { body[f.key] = fields[f.key]; });
 
     const res = await fetch("/api/broker/connect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const json = await res.json();
+    let json: any = null;
+    try { json = await res.json(); } catch { /* non-JSON error body — fall through with json=null */ }
     setBusy(false);
-    if (!res.ok) { setError(json.error ?? "Connection failed."); return; }
+    if (!res.ok) { setError(json?.error ?? `Connection failed (${res.status})`); return; }
     onConnected();
     onClose();
   }
