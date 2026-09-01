@@ -26,9 +26,22 @@ export default function LoginPage() {
       if (attempt.status === "complete") {
         await setActiveSignIn({ session: attempt.createdSessionId });
         router.push("/");
-      } else {
-        setError("Additional verification is required for this account — not yet supported here.");
+        return;
       }
+
+      // A new/unrecognized device (or an account with a required second check) lands here
+      // even with the right password — Clerk asks for one more factor before finishing.
+      if (attempt.status === "needs_first_factor") {
+        const emailFactor = attempt.supportedFirstFactors?.find((f: any) => f.strategy === "email_code");
+        if (emailFactor) {
+          await signIn.prepareFirstFactor({ strategy: "email_code", emailAddressId: (emailFactor as any).emailAddressId });
+          setVerifying(true);
+          setBusy(false);
+          return;
+        }
+      }
+
+      setError("This account needs a verification step that isn't supported here yet.");
     } catch (err: any) {
       setError(err?.errors?.[0]?.message ?? "Invalid email or password.");
     } finally {
@@ -52,15 +65,26 @@ export default function LoginPage() {
   }
 
   async function handleVerify() {
-    if (!signUpLoaded) return;
     setBusy(true);
     setError(null);
     try {
-      const attempt = await signUp.attemptEmailAddressVerification({ code });
-      if (attempt.status === "complete") {
-        await setActiveSignUp({ session: attempt.createdSessionId });
-        router.push("/");
+      if (mode === "login") {
+        if (!signInLoaded) return;
+        const attempt = await signIn.attemptFirstFactor({ strategy: "email_code", code });
+        if (attempt.status === "complete") {
+          await setActiveSignIn({ session: attempt.createdSessionId });
+          router.push("/");
+          return;
+        }
+        setError("That code didn't work — check it and try again.");
       } else {
+        if (!signUpLoaded) return;
+        const attempt = await signUp.attemptEmailAddressVerification({ code });
+        if (attempt.status === "complete") {
+          await setActiveSignUp({ session: attempt.createdSessionId });
+          router.push("/");
+          return;
+        }
         setError("That code didn't work — check it and try again.");
       }
     } catch (err: any) {
