@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-export type Broker = "ALPACA" | "WEBULL" | "IBKR" | "KRAKEN" | "COINBASE" | "TRADOVATE";
+export type Broker = "ALPACA" | "WEBULL" | "IBKR" | "KRAKEN" | "COINBASE" | "TRADOVATE" | "BINANCE_US";
 
 const BROKERS: { id: Broker; name: string; color: string; glyph: string; status: string; statusColor: string; blurb: string; fields: { key: string; label: string; type?: string; textarea?: boolean }[] }[] = [
   { id: "ALPACA", name: "Alpaca", color: "#2DD4A7", glyph: "A", status: "Paper ready", statusColor: "var(--green)", blurb: "Paper trading connects instantly and free. Live trading requires identity verification (1-3 business days).", fields: [{ key: "apiKeyId", label: "API Key ID" }, { key: "apiSecretKey", label: "API Secret Key", type: "password" }] },
@@ -10,6 +10,7 @@ const BROKERS: { id: Broker; name: string; color: string; glyph: string; status:
   { id: "TRADOVATE", name: "Tradovate", color: "#F5A623", glyph: "T", status: "Key ready", statusColor: "var(--green)", blurb: "Uses your Tradovate username/password plus an API app id (cid) and secret (sec) from Settings → API Access.", fields: [{ key: "username", label: "Username" }, { key: "password", label: "Password", type: "password" }, { key: "cid", label: "Client ID (cid)" }, { key: "sec", label: "Client Secret (sec)", type: "password" }] },
   { id: "WEBULL", name: "Webull", color: "#2563EB", glyph: "W", status: "Needs approval", statusColor: "var(--amber)", blurb: "Requires an approved OpenAPI application (developer.webull.com) — typically a 1-2 business day review.", fields: [{ key: "appKey", label: "App Key" }, { key: "appSecret", label: "App Secret", type: "password" }] },
   { id: "IBKR", name: "Interactive Brokers", color: "#B91C1C", glyph: "IB", status: "Needs gateway", statusColor: "var(--amber)", blurb: "Requires a running Client Portal Gateway logged into your funded/paper IBKR account.", fields: [{ key: "gatewayUrl", label: "Gateway URL" }, { key: "accountId", label: "Account ID" }] },
+  { id: "BINANCE_US", name: "Binance.US", color: "#F0B90B", glyph: "B", status: "Key ready", statusColor: "var(--green)", blurb: "Generate an API key pair from API Management in your Binance.US account settings.", fields: [{ key: "apiKey", label: "API Key" }, { key: "apiSecret", label: "Secret Key", type: "password" }] },
 ];
 
 export function BrokerConnectModal({ onClose, onConnected }: { onClose: () => void; onConnected: (broker: Broker, mode: "PAPER" | "LIVE") => void }) {

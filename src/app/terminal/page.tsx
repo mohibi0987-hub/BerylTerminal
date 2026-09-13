@@ -125,7 +125,11 @@ export default function Terminal() {
           <button onClick={() => setShowConnect(true)} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--green-border)", background: "var(--green-dim)", color: "var(--green)", fontWeight: 700, fontSize: 12 }}>
             Connect broker
           </button>
-          <UserButton afterSignOutUrl="/login" appearance={clerkAppearance} />
+          <UserButton afterSignOutUrl="/login" appearance={clerkAppearance}>
+            <UserButton.MenuItems>
+              <UserButton.Link label="General Settings" href="/settings" labelIcon={<span>⚙️</span>} />
+            </UserButton.MenuItems>
+          </UserButton>
         </div>
       </div>
 

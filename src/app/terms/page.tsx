@@ -36,7 +36,7 @@ export default function TermsPage() {
           <p>
             BerylTerminal is not a broker-dealer, exchange, or custodian. Your brokerage relationship, account
             agreements, and fees are entirely with the broker you connect (Alpaca, Kraken, Coinbase, Tradovate,
-            Webull, or Interactive Brokers). We route orders and read account data on your behalf using
+            Webull, Binance.US, or Interactive Brokers). We route orders and read account data on your behalf using
             credentials you provide; we do not hold your funds or securities.
           </p>
 

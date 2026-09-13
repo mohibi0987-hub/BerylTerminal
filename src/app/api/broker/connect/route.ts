@@ -9,6 +9,7 @@ import { IbkrAdapter } from "@/lib/brokers/ibkr";
 import { KrakenAdapter } from "@/lib/brokers/kraken";
 import { CoinbaseAdapter } from "@/lib/brokers/coinbase";
 import { TradovateAdapter } from "@/lib/brokers/tradovate";
+import { BinanceUsAdapter } from "@/lib/brokers/binanceus";
 
 // Required credential fields per broker — used only to build the adapter and to validate
 // the request body; the credentials themselves are stored as one generic encrypted blob,
@@ -20,6 +21,7 @@ const REQUIRED_FIELDS: Record<BrokerName, string[]> = {
   KRAKEN: ["apiKey", "apiSecret"],
   COINBASE: ["apiKeyName", "apiSecret"],
   TRADOVATE: ["username", "password", "cid", "sec"],
+  BINANCE_US: ["apiKey", "apiSecret"],
 };
 
 function buildAdapter(broker: BrokerName, mode: ExecutionMode) {
@@ -30,6 +32,7 @@ function buildAdapter(broker: BrokerName, mode: ExecutionMode) {
     case "KRAKEN": return new KrakenAdapter(mode);
     case "COINBASE": return new CoinbaseAdapter(mode);
     case "TRADOVATE": return new TradovateAdapter(mode);
+    case "BINANCE_US": return new BinanceUsAdapter(mode);
   }
 }
 

@@ -17,6 +17,7 @@ enum BrokerName {
   KRAKEN
   COINBASE
   TRADOVATE
+  BINANCE_US
 }
 
 enum BrokerConnectionStatus {

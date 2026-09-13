@@ -6,6 +6,7 @@ import { IbkrAdapter } from "./ibkr";
 import { KrakenAdapter } from "./kraken";
 import { CoinbaseAdapter } from "./coinbase";
 import { TradovateAdapter } from "./tradovate";
+import { BinanceUsAdapter } from "./binanceus";
 import { getEphemeralCredentials } from "../auth";
 import type { BrokerAdapter, BrokerName, ExecutionMode } from "./types";
 
@@ -17,6 +18,7 @@ function buildAdapter(broker: BrokerName, mode: ExecutionMode): BrokerAdapter {
     case "KRAKEN": return new KrakenAdapter(mode);
     case "COINBASE": return new CoinbaseAdapter(mode);
     case "TRADOVATE": return new TradovateAdapter(mode);
+    case "BINANCE_US": return new BinanceUsAdapter(mode);
     default: throw new Error(`Unknown broker: ${broker}`);
   }
 }

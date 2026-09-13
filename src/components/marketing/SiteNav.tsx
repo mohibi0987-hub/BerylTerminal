@@ -17,7 +17,11 @@ export function SiteNav() {
         <div className="spacer">
           <SignedIn>
             <a href="/terminal" className="btn btn-ghost">Terminal</a>
-            <UserButton afterSignOutUrl="/" appearance={clerkAppearance} />
+            <UserButton afterSignOutUrl="/" appearance={clerkAppearance}>
+              <UserButton.MenuItems>
+                <UserButton.Link label="General Settings" href="/settings" labelIcon={<span>⚙️</span>} />
+              </UserButton.MenuItems>
+            </UserButton>
           </SignedIn>
           <SignedOut>
             <a href="/login" className="btn btn-ghost">Sign in</a>
