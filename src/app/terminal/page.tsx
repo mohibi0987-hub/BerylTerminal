@@ -163,18 +163,29 @@ export default function Terminal() {
                 <div style={{ fontSize: 12.5, color: "var(--faint)" }}>No open positions on this connection.</div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {positions.map((p: any) => (
-                    <div key={p.symbol} style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 10px", background: "var(--bg-soft)", borderRadius: 6, fontSize: 12.5 }}>
-                      <span style={{ fontWeight: 700, minWidth: 60 }}>{p.symbol}</span>
-                      <span style={{ color: "var(--muted)" }}>{p.quantity} shares</span>
-                      <span style={{ color: "var(--muted)" }}>Avg ${Number(p.avgPrice ?? 0).toFixed(2)}</span>
-                      {p.marketValue != null && (
-                        <span className="mono" style={{ marginLeft: "auto", color: "var(--muted)" }}>
-                          Mkt value ${Number(p.marketValue).toLocaleString()}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                  {positions.map((p: any) => {
+                    const costBasis = Number(p.avgPrice ?? 0) * Number(p.quantity ?? 0);
+                    const hasPnl = p.marketValue != null && costBasis > 0;
+                    const pnl = hasPnl ? Number(p.marketValue) - costBasis : null;
+                    const pnlPct = hasPnl ? (pnl! / costBasis) * 100 : null;
+                    return (
+                      <div key={p.symbol} style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 10px", background: "var(--bg-soft)", borderRadius: 6, fontSize: 12.5 }}>
+                        <span style={{ fontWeight: 700, minWidth: 60 }}>{p.symbol}</span>
+                        <span style={{ color: "var(--muted)" }}>{p.quantity} shares</span>
+                        <span style={{ color: "var(--muted)" }}>Avg ${Number(p.avgPrice ?? 0).toFixed(2)}</span>
+                        {p.marketValue != null && (
+                          <span className="mono" style={{ color: "var(--muted)" }}>
+                            Mkt value ${Number(p.marketValue).toLocaleString()}
+                          </span>
+                        )}
+                        {pnl != null && (
+                          <span className="mono" style={{ marginLeft: "auto", fontWeight: 700, color: pnl >= 0 ? "var(--green)" : "var(--red)" }}>
+                            {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)} ({pnl >= 0 ? "+" : ""}{pnlPct!.toFixed(2)}%)
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )
             )}

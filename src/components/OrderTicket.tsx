@@ -1,5 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const PRESETS_KEY = "beryl.orderTicket.qtyPresets";
+const DEFAULT_PRESETS = [10, 25, 50, 100];
 
 export function OrderTicket({ symbol, broker, mode, onOrderPlaced }: { symbol: string; broker: string; mode: "PAPER" | "LIVE"; onOrderPlaced?: () => void }) {
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
@@ -8,6 +11,29 @@ export function OrderTicket({ symbol, broker, mode, onOrderPlaced }: { symbol: s
   const [limitPrice, setLimitPrice] = useState<number | "">("");
   const [result, setResult] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Quick-size presets — the same pattern as Axiom/Padre's P1/P2/P3 quick-buy
+  // buttons, adapted to share quantity instead of a notional SOL amount:
+  // one click loads a preset size instead of retyping it every order.
+  // Presets are a local UI convenience only (kept in localStorage) — they
+  // never submit an order by themselves, unlike those platforms' "Instant
+  // Trade" one-click execute, which isn't something to copy blindly for
+  // orders that hit a real broker.
+  const [presets, setPresets] = useState<number[]>(DEFAULT_PRESETS);
+  const [editingPresets, setEditingPresets] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PRESETS_KEY);
+      if (saved) setPresets(JSON.parse(saved));
+    } catch { /* localStorage unavailable or bad JSON — fall back to defaults */ }
+  }, []);
+
+  function updatePreset(index: number, value: number) {
+    const next = presets.map((p, i) => (i === index ? value : p));
+    setPresets(next);
+    try { localStorage.setItem(PRESETS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  }
 
   async function submit() {
     setBusy(true);
@@ -45,8 +71,34 @@ export function OrderTicket({ symbol, broker, mode, onOrderPlaced }: { symbol: s
         <span onClick={() => setType("LIMIT")} style={{ cursor: "pointer", color: type === "LIMIT" ? "var(--text)" : "var(--muted)", borderBottom: type === "LIMIT" ? "2px solid var(--green)" : "none" }}>Limit</span>
       </div>
       <div style={{ marginBottom: 8 }}>
-        <label style={{ fontSize: 11, color: "var(--muted)" }}>Quantity</label>
-        <input type="number" value={qty} onChange={(e) => setQty(Number(e.target.value))} style={{ width: "100%" }} />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <label style={{ fontSize: 11, color: "var(--muted)" }}>Quantity</label>
+          <span onClick={() => setEditingPresets((v) => !v)} style={{ fontSize: 10.5, color: "var(--faint)", cursor: "pointer" }}>
+            {editingPresets ? "Done" : "Edit presets"}
+          </span>
+        </div>
+        <input type="number" value={qty} onChange={(e) => setQty(Number(e.target.value))} style={{ width: "100%", marginBottom: 6 }} />
+        <div style={{ display: "flex", gap: 4 }}>
+          {presets.map((p, i) =>
+            editingPresets ? (
+              <input
+                key={i}
+                type="number"
+                value={p}
+                onChange={(e) => updatePreset(i, Number(e.target.value))}
+                style={{ flex: 1, padding: "4px 2px", fontSize: 11, textAlign: "center" }}
+              />
+            ) : (
+              <button
+                key={i}
+                onClick={() => setQty(p)}
+                style={{ flex: 1, padding: "5px 0", fontSize: 11, borderRadius: 6, border: "1px solid var(--border)", background: qty === p ? "var(--panel2)" : "transparent", color: qty === p ? "var(--text)" : "var(--muted)", cursor: "pointer" }}
+              >
+                {p}
+              </button>
+            )
+          )}
+        </div>
       </div>
       {type === "LIMIT" && (
         <div style={{ marginBottom: 8 }}>
