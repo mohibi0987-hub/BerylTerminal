@@ -1,11 +1,12 @@
 "use client";
-import { useState } from "react";
-import { useSignIn, useSignUp } from "@clerk/nextjs";
+import { useEffect, useState } from "react";
+import { useSignIn, useSignUp, useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const { isLoaded: signInLoaded, signIn, setActive: setActiveSignIn } = useSignIn();
   const { isLoaded: signUpLoaded, signUp, setActive: setActiveSignUp } = useSignUp();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const router = useRouter();
 
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -16,6 +17,14 @@ export default function LoginPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // If a session already exists in this browser (e.g. a previous attempt
+  // actually succeeded, or you're switching back from testing another
+  // account), send them straight through instead of letting them hit
+  // "session_exists" by trying to sign in again on top of it.
+  useEffect(() => {
+    if (authLoaded && isSignedIn) router.replace("/terminal");
+  }, [authLoaded, isSignedIn]);
 
   async function handleSignIn() {
     if (!signInLoaded) return;
@@ -45,6 +54,12 @@ export default function LoginPage() {
 
       setError("This account needs a verification step that isn't supported here yet.");
     } catch (err: any) {
+      // A session already exists in this browser — not a real failure,
+      // just stale client state. Send them in rather than show an error.
+      if (err?.errors?.[0]?.code === "session_exists") {
+        router.replace("/terminal");
+        return;
+      }
       setError(err?.errors?.[0]?.message ?? "Invalid email or password.");
     } finally {
       setBusy(false);
@@ -60,6 +75,10 @@ export default function LoginPage() {
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       setVerifying(true);
     } catch (err: any) {
+      if (err?.errors?.[0]?.code === "session_exists") {
+        router.replace("/terminal");
+        return;
+      }
       setError(err?.errors?.[0]?.message ?? "Could not create account.");
     } finally {
       setBusy(false);
@@ -133,6 +152,12 @@ export default function LoginPage() {
         )}
 
         {error && <div style={{ color: "var(--red)", fontSize: 12, marginBottom: 10 }}>{error}</div>}
+
+        {/* Required for Clerk's bot protection to render its real (Smart)
+            CAPTCHA widget instead of silently falling back to the Invisible
+            widget, which is deprecated and was failing in this environment. */}
+        <div id="clerk-captcha" data-cl-theme="dark" style={{ marginBottom: error ? 0 : 4 }} />
+
         <button onClick={submit} disabled={busy} style={{ width: "100%", padding: 11, borderRadius: 6, border: "none", background: "var(--green)", color: "#04150F", fontWeight: 700 }}>
           {busy ? "Please wait…" : verifying ? "Verify" : mode === "login" ? "Sign in" : "Create account"}
         </button>
