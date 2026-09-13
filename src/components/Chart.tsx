@@ -1,8 +1,17 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { createChart, ColorType, type UTCTimestamp, type ISeriesApi } from "lightweight-charts";
+import { createChart, ColorType, type UTCTimestamp, type ISeriesApi, type IChartApi } from "lightweight-charts";
 
 type Bar = { timestamp: string; open: number; high: number; low: number; close: number; volume: number };
+
+const RANGES = [
+  { label: "1D", days: 1 },
+  { label: "1W", days: 7 },
+  { label: "1M", days: 30 },
+  { label: "3M", days: 90 },
+  { label: "1Y", days: 365 },
+  { label: "All", days: null },
+];
 
 function sma(bars: Bar[], period: number) {
   const out: { time: UTCTimestamp; value: number }[] = [];
@@ -28,8 +37,35 @@ export function Chart({
   showSma50?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const barsRef = useRef<Bar[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [readout, setReadout] = useState<{ last: number; change: number; changePct: number } | null>(null);
+  // "All" by default — a specific range only narrows the view once bars
+  // are loaded; it never changes what's fetched, so it costs nothing extra.
+  const [activeRange, setActiveRange] = useState<string>("All");
+
+  function applyRange(days: number | null) {
+    const chart = chartRef.current;
+    const bars = barsRef.current;
+    if (!chart || bars.length === 0) return;
+    if (days === null) {
+      chart.timeScale().fitContent();
+      return;
+    }
+    const lastTime = Math.floor(new Date(bars[bars.length - 1].timestamp).getTime() / 1000);
+    const fromTime = lastTime - days * 86400;
+    const earliest = Math.floor(new Date(bars[0].timestamp).getTime() / 1000);
+    chart.timeScale().setVisibleRange({
+      from: Math.max(fromTime, earliest) as UTCTimestamp,
+      to: lastTime as UTCTimestamp,
+    });
+  }
+
+  function selectRange(label: string, days: number | null) {
+    setActiveRange(label);
+    applyRange(days);
+  }
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -43,6 +79,7 @@ export function Chart({
       timeScale: { borderColor: "#1E2733" },
       rightPriceScale: { borderColor: "#1E2733" },
     });
+    chartRef.current = chart;
     const series = chart.addCandlestickSeries({
       upColor: "#2DD4A7", downColor: "#FF5C7A", borderVisible: false,
       wickUpColor: "#2DD4A7", wickDownColor: "#FF5C7A",
@@ -80,6 +117,7 @@ export function Chart({
         }
         setError(null);
         const typedBars = bars as Bar[];
+        barsRef.current = typedBars;
         series.setData(typedBars.map((b) => ({
           time: Math.floor(new Date(b.timestamp).getTime() / 1000) as UTCTimestamp,
           open: b.open, high: b.high, low: b.low, close: b.close,
@@ -99,6 +137,8 @@ export function Chart({
           const change = last - first;
           setReadout({ last, change, changePct: (change / first) * 100 });
         }
+        const range = RANGES.find((r) => r.label === activeRange);
+        applyRange(range ? range.days : null);
       } catch {
         if (!cancelled) setError("Couldn't reach the server. Retrying…");
       }
@@ -114,31 +154,54 @@ export function Chart({
       clearInterval(poll);
       window.removeEventListener("resize", onResize);
       chart.remove();
+      chartRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, interval, showVolume, showSma20, showSma50]);
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+    <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
+        <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
 
-      {readout && (
-        <div style={{ position: "absolute", top: 10, left: 12, zIndex: 2, display: "flex", alignItems: "baseline", gap: 8, pointerEvents: "none" }}>
-          <span className="mono disp" style={{ fontSize: 20, fontWeight: 700, color: "var(--text)" }}>{readout.last.toFixed(2)}</span>
-          <span className="mono" style={{ fontSize: 13, fontWeight: 700, color: readout.change >= 0 ? "var(--green)" : "var(--red)" }}>
-            {readout.change >= 0 ? "+" : ""}{readout.change.toFixed(2)} ({readout.change >= 0 ? "+" : ""}{readout.changePct.toFixed(2)}%)
-          </span>
-          {showSma20 && <span className="mono" style={{ fontSize: 11, color: "#F5A623" }}>SMA 20</span>}
-          {showSma50 && <span className="mono" style={{ fontSize: 11, color: "#5B8DEF" }}>SMA 50</span>}
-        </div>
-      )}
-
-      {error && (
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-          <div style={{ background: "rgba(13,18,32,.92)", border: "1px solid var(--border)", borderRadius: 10, padding: "14px 20px", maxWidth: 340, textAlign: "center" }}>
-            <div style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.5 }}>{error}</div>
+        {readout && (
+          <div style={{ position: "absolute", top: 10, left: 12, zIndex: 2, display: "flex", alignItems: "baseline", gap: 8, pointerEvents: "none" }}>
+            <span className="mono disp" style={{ fontSize: 20, fontWeight: 700, color: "var(--text)" }}>{readout.last.toFixed(2)}</span>
+            <span className="mono" style={{ fontSize: 13, fontWeight: 700, color: readout.change >= 0 ? "var(--green)" : "var(--red)" }}>
+              {readout.change >= 0 ? "+" : ""}{readout.change.toFixed(2)} ({readout.change >= 0 ? "+" : ""}{readout.changePct.toFixed(2)}%)
+            </span>
+            {showSma20 && <span className="mono" style={{ fontSize: 11, color: "#F5A623" }}>SMA 20</span>}
+            {showSma50 && <span className="mono" style={{ fontSize: 11, color: "#5B8DEF" }}>SMA 50</span>}
           </div>
-        </div>
-      )}
+        )}
+
+        {error && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+            <div style={{ background: "rgba(13,18,32,.92)", border: "1px solid var(--border)", borderRadius: 10, padding: "14px 20px", maxWidth: 340, textAlign: "center" }}>
+              <div style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.5 }}>{error}</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Visible-range zoom, same convention as TradingView's bottom bar —
+          distinct from the timeframe selector above the chart: this only
+          narrows what's already loaded, it never changes what's fetched. */}
+      <div style={{ height: 26, display: "flex", alignItems: "center", gap: 2, padding: "0 10px", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
+        {RANGES.map((r) => (
+          <button
+            key={r.label}
+            onClick={() => selectRange(r.label, r.days)}
+            style={{
+              padding: "2px 8px", borderRadius: 4, border: "none", fontSize: 10.5, fontWeight: 700, cursor: "pointer",
+              background: activeRange === r.label ? "var(--panel2)" : "transparent",
+              color: activeRange === r.label ? "var(--text)" : "var(--faint)",
+            }}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
