@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-export function OrderTicket({ symbol, broker, mode }: { symbol: string; broker: string; mode: "PAPER" | "LIVE" }) {
+export function OrderTicket({ symbol, broker, mode, onOrderPlaced }: { symbol: string; broker: string; mode: "PAPER" | "LIVE"; onOrderPlaced?: () => void }) {
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
   const [qty, setQty] = useState(10);
   const [type, setType] = useState<"MARKET" | "LIMIT">("MARKET");
@@ -24,6 +24,7 @@ export function OrderTicket({ symbol, broker, mode }: { symbol: string; broker: 
     const json = await res.json();
     setBusy(false);
     setResult(json.status === "REJECTED" ? `Rejected: ${json.reason}` : `${json.status ?? "Submitted"} — order ${json.order?.id ?? ""}`);
+    if (json.status !== "REJECTED") onOrderPlaced?.();
   }
 
   return (

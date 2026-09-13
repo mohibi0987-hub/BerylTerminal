@@ -4,6 +4,20 @@ import { useClerk } from "@clerk/nextjs";
 import { Chart } from "@/components/Chart";
 import { OrderTicket } from "@/components/OrderTicket";
 import { BrokerConnectModal, type Broker } from "@/components/BrokerConnectModal";
+import { Watchlist } from "@/components/Watchlist";
+import { TwoFactorSetupModal } from "@/components/TwoFactorSetupModal";
+import { TwoFactorVerifyGate } from "@/components/TwoFactorVerifyGate";
+
+const STATUS_COLOR: Record<string, string> = {
+  FILLED: "var(--green)",
+  PARTIALLY_FILLED: "var(--amber, #f5a623)",
+  REJECTED: "var(--red)",
+  CANCELLED: "var(--muted)",
+  SUBMITTED: "var(--blue, #5b8def)",
+  BROKER_ACCEPTED: "var(--blue, #5b8def)",
+  CREATED: "var(--muted)",
+  RISK_VALIDATION: "var(--muted)",
+};
 
 export default function Home() {
   const { signOut } = useClerk();
@@ -14,6 +28,14 @@ export default function Home() {
   const [account, setAccount] = useState<any>(null);
   const [positions, setPositions] = useState<any[]>([]);
   const [accountError, setAccountError] = useState<string | null>(null);
+  const [bottomTab, setBottomTab] = useState<"positions" | "orders">("positions");
+  const [orders, setOrders] = useState<any[] | null>(null);
+  const [twoFactorStatus, setTwoFactorStatus] = useState<{ twoFactorEnabled: boolean; needsVerification: boolean } | null>(null);
+  const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/2fa/verify-session").then((res) => res.json()).then(setTwoFactorStatus).catch(() => setTwoFactorStatus({ twoFactorEnabled: false, needsVerification: false }));
+  }, []);
 
   async function refreshAccount(b: Broker = broker, m: "PAPER" | "LIVE" = mode) {
     const res = await fetch(`/api/account?broker=${b}&mode=${m}`);
@@ -27,12 +49,41 @@ export default function Home() {
     setPositions(json.positions ?? []);
   }
 
+  // The GET /api/orders route already existed and already worked — this
+  // was purely a missing display, same story as positions above.
+  async function refreshOrders() {
+    const res = await fetch("/api/orders");
+    if (!res.ok) return;
+    const data = await res.json();
+    setOrders(data);
+  }
+
   useEffect(() => { refreshAccount(); }, []);
+  useEffect(() => { if (bottomTab === "orders" && orders === null) refreshOrders(); }, [bottomTab]);
 
   function handleConnected(newBroker: Broker, newMode: "PAPER" | "LIVE") {
     setBroker(newBroker);
     setMode(newMode);
     refreshAccount(newBroker, newMode);
+  }
+
+  function handleOrderPlaced() {
+    // An order was just submitted from the ticket — refresh both views
+    // so the new order/updated position shows up without a manual reload.
+    refreshAccount();
+    if (bottomTab === "orders") refreshOrders();
+    setOrders(null);
+  }
+
+  function handleTwoFactorVerified() {
+    setTwoFactorStatus((s) => (s ? { ...s, needsVerification: false } : s));
+  }
+
+  // Blocks the whole terminal, not just a banner — if this account has
+  // 2FA enabled and this specific session hasn't passed it yet, nothing
+  // else renders until it does.
+  if (twoFactorStatus?.needsVerification) {
+    return <TwoFactorVerifyGate onVerified={handleTwoFactorVerified} />;
   }
 
   return (
@@ -51,6 +102,9 @@ export default function Home() {
           ) : (
             <span style={{ fontSize: 12, color: "var(--faint)" }}>{accountError ? "No broker connected" : "Loading…"}</span>
           )}
+          <button onClick={() => setShowTwoFactorSetup(true)} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", fontSize: 12 }}>
+            {twoFactorStatus?.twoFactorEnabled ? "2FA enabled" : "Set up 2FA"}
+          </button>
           <button onClick={() => setShowConnect(true)} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--green-border)", background: "var(--green-dim)", color: "var(--green)", fontWeight: 700, fontSize: 12 }}>
             Connect broker
           </button>
@@ -66,35 +120,84 @@ export default function Home() {
             <Chart symbol={symbol} />
           </div>
           <div style={{ borderTop: "1px solid var(--border)", padding: 14, maxHeight: 220, overflowY: "auto" }}>
-            <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.03em", marginBottom: 10 }}>
-              Positions {positions.length > 0 && `(${positions.length})`}
+            <div style={{ display: "flex", gap: 14, marginBottom: 10 }}>
+              <button
+                onClick={() => setBottomTab("positions")}
+                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.03em", color: bottomTab === "positions" ? "var(--text)" : "var(--muted)", fontWeight: bottomTab === "positions" ? 700 : 400 }}
+              >
+                Positions {positions.length > 0 && `(${positions.length})`}
+              </button>
+              <button
+                onClick={() => setBottomTab("orders")}
+                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.03em", color: bottomTab === "orders" ? "var(--text)" : "var(--muted)", fontWeight: bottomTab === "orders" ? 700 : 400 }}
+              >
+                Orders {orders && orders.length > 0 && `(${orders.length})`}
+              </button>
             </div>
-            {positions.length === 0 ? (
-              <div style={{ fontSize: 12.5, color: "var(--faint)" }}>No open positions on this connection.</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {positions.map((p: any) => (
-                  <div key={p.symbol} style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 10px", background: "var(--bg-soft)", borderRadius: 6, fontSize: 12.5 }}>
-                    <span style={{ fontWeight: 700, minWidth: 60 }}>{p.symbol}</span>
-                    <span style={{ color: "var(--muted)" }}>{p.quantity} shares</span>
-                    <span style={{ color: "var(--muted)" }}>Avg ${Number(p.avgPrice ?? 0).toFixed(2)}</span>
-                    {p.marketValue != null && (
-                      <span className="mono" style={{ marginLeft: "auto", color: "var(--muted)" }}>
-                        Mkt value ${Number(p.marketValue).toLocaleString()}
+
+            {bottomTab === "positions" && (
+              positions.length === 0 ? (
+                <div style={{ fontSize: 12.5, color: "var(--faint)" }}>No open positions on this connection.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {positions.map((p: any) => (
+                    <div key={p.symbol} style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 10px", background: "var(--bg-soft)", borderRadius: 6, fontSize: 12.5 }}>
+                      <span style={{ fontWeight: 700, minWidth: 60 }}>{p.symbol}</span>
+                      <span style={{ color: "var(--muted)" }}>{p.quantity} shares</span>
+                      <span style={{ color: "var(--muted)" }}>Avg ${Number(p.avgPrice ?? 0).toFixed(2)}</span>
+                      {p.marketValue != null && (
+                        <span className="mono" style={{ marginLeft: "auto", color: "var(--muted)" }}>
+                          Mkt value ${Number(p.marketValue).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {bottomTab === "orders" && (
+              orders === null ? (
+                <div style={{ fontSize: 12.5, color: "var(--faint)" }}>Loading…</div>
+              ) : orders.length === 0 ? (
+                <div style={{ fontSize: 12.5, color: "var(--faint)" }}>No orders placed yet.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {orders.map((o: any) => (
+                    <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 10px", background: "var(--bg-soft)", borderRadius: 6, fontSize: 12.5 }}>
+                      <span style={{ fontWeight: 700, minWidth: 60 }}>{o.instrument?.symbol}</span>
+                      <span style={{ color: o.side === "BUY" ? "var(--green)" : "var(--red)", minWidth: 40 }}>{o.side}</span>
+                      <span style={{ color: "var(--muted)" }}>{o.quantity} @ {o.type === "MARKET" ? "MKT" : `$${o.limitPrice}`}</span>
+                      <span style={{ color: STATUS_COLOR[o.status] ?? "var(--muted)", fontSize: 11 }}>{o.status.replace(/_/g, " ")}</span>
+                      {o.rejectReason && <span style={{ color: "var(--red)", fontSize: 11 }} title={o.rejectReason}>⚠</span>}
+                      <span className="mono" style={{ marginLeft: "auto", color: "var(--faint)", fontSize: 11 }}>
+                        {new Date(o.createdAt).toLocaleString()}
                       </span>
-                    )}
-                  </div>
-                ))}
-              </div>
+                    </div>
+                  ))}
+                </div>
+              )
             )}
           </div>
         </div>
-        <div style={{ width: 300, borderLeft: "1px solid var(--border)", padding: 14, background: "var(--bg-soft)" }}>
-          <OrderTicket symbol={symbol} broker={broker} mode={mode} />
+        <div style={{ width: 300, borderLeft: "1px solid var(--border)", padding: 14, background: "var(--bg-soft)", display: "flex", flexDirection: "column", gap: 18, overflowY: "auto" }}>
+          <Watchlist onSelectSymbol={setSymbol} />
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+            <OrderTicket symbol={symbol} broker={broker} mode={mode} onOrderPlaced={handleOrderPlaced} />
+          </div>
         </div>
       </div>
 
       {showConnect && <BrokerConnectModal onClose={() => setShowConnect(false)} onConnected={handleConnected} />}
+      {showTwoFactorSetup && (
+        <TwoFactorSetupModal
+          onClose={() => setShowTwoFactorSetup(false)}
+          onEnabled={() => {
+            setShowTwoFactorSetup(false);
+            setTwoFactorStatus((s) => (s ? { ...s, twoFactorEnabled: true } : s));
+          }}
+        />
+      )}
     </div>
   );
 }
