@@ -34,6 +34,9 @@ export default function Terminal() {
   const [symbol, setSymbol] = useState("AAPL");
   const [openSymbols, setOpenSymbols] = useState<string[]>(["AAPL"]);
   const [timeframe, setTimeframe] = useState("1min");
+  const [showVolume, setShowVolume] = useState(true);
+  const [showSma20, setShowSma20] = useState(false);
+  const [showSma50, setShowSma50] = useState(false);
   const [showConnect, setShowConnect] = useState(false);
   const [broker, setBroker] = useState<Broker>("ALPACA");
   const [mode, setMode] = useState<"PAPER" | "LIVE">("PAPER");
@@ -165,9 +168,27 @@ export default function Terminal() {
                 {tf.label}
               </button>
             ))}
+            <span style={{ width: 1, height: 16, background: "var(--border)", margin: "0 8px" }} />
+            {[
+              { key: "vol", label: "Vol", active: showVolume, toggle: () => setShowVolume((v) => !v) },
+              { key: "sma20", label: "SMA 20", active: showSma20, toggle: () => setShowSma20((v) => !v) },
+              { key: "sma50", label: "SMA 50", active: showSma50, toggle: () => setShowSma50((v) => !v) },
+            ].map((ind) => (
+              <button
+                key={ind.key}
+                onClick={ind.toggle}
+                style={{
+                  padding: "4px 9px", borderRadius: 5, border: "1px solid var(--border)", fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+                  background: ind.active ? "var(--panel2)" : "transparent",
+                  color: ind.active ? "var(--text)" : "var(--faint)",
+                }}
+              >
+                {ind.label}
+              </button>
+            ))}
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
-            <Chart symbol={symbol} interval={timeframe} />
+            <Chart symbol={symbol} interval={timeframe} showVolume={showVolume} showSma20={showSma20} showSma50={showSma50} />
           </div>
           <div style={{ borderTop: "1px solid var(--border)", padding: 14, maxHeight: 220, overflowY: "auto" }}>
             <div style={{ display: "flex", gap: 14, marginBottom: 10 }}>
