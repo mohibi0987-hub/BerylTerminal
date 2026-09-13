@@ -22,7 +22,7 @@ export default function PrivacyPage() {
           <ul>
             <li>Account information: email address, name, and authentication data, handled by our identity provider.</li>
             <li>Broker connection details: API keys/credentials you provide are encrypted at rest and used only to place orders and read account data on your behalf.</li>
-            <li>Trading activity you generate in the terminal: orders, positions, watchlists, and two-factor settings.</li>
+            <li>Trading activity you generate in the terminal: orders, positions, and watchlists.</li>
             <li>Standard technical data: IP address, browser type, and basic usage logs for security and reliability.</li>
           </ul>
 

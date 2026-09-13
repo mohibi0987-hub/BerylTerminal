@@ -6,8 +6,6 @@ import { Chart } from "@/components/Chart";
 import { OrderTicket } from "@/components/OrderTicket";
 import { BrokerConnectModal, type Broker } from "@/components/BrokerConnectModal";
 import { Watchlist } from "@/components/Watchlist";
-import { TwoFactorSetupModal } from "@/components/TwoFactorSetupModal";
-import { TwoFactorVerifyGate } from "@/components/TwoFactorVerifyGate";
 
 const STATUS_COLOR: Record<string, string> = {
   FILLED: "var(--green)",
@@ -32,12 +30,6 @@ export default function Terminal() {
   const [accountError, setAccountError] = useState<string | null>(null);
   const [bottomTab, setBottomTab] = useState<"positions" | "orders">("positions");
   const [orders, setOrders] = useState<any[] | null>(null);
-  const [twoFactorStatus, setTwoFactorStatus] = useState<{ twoFactorEnabled: boolean; needsVerification: boolean } | null>(null);
-  const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/2fa/verify-session").then((res) => res.json()).then(setTwoFactorStatus).catch(() => setTwoFactorStatus({ twoFactorEnabled: false, needsVerification: false }));
-  }, []);
 
   async function refreshAccount(b: Broker = broker, m: "PAPER" | "LIVE" = mode) {
     const res = await fetch(`/api/account?broker=${b}&mode=${m}`);
@@ -94,17 +86,6 @@ export default function Terminal() {
     setOrders(null);
   }
 
-  function handleTwoFactorVerified() {
-    setTwoFactorStatus((s) => (s ? { ...s, needsVerification: false } : s));
-  }
-
-  // Blocks the whole terminal, not just a banner — if this account has
-  // 2FA enabled and this specific session hasn't passed it yet, nothing
-  // else renders until it does.
-  if (twoFactorStatus?.needsVerification) {
-    return <TwoFactorVerifyGate onVerified={handleTwoFactorVerified} />;
-  }
-
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <div style={{ height: 54, display: "flex", alignItems: "center", gap: 16, padding: "0 16px", borderBottom: "1px solid var(--border)", background: "var(--bg-soft)" }}>
@@ -126,9 +107,6 @@ export default function Terminal() {
           ) : (
             <span style={{ fontSize: 12, color: "var(--faint)" }}>{accountError ? "No broker connected" : "Loading…"}</span>
           )}
-          <button onClick={() => setShowTwoFactorSetup(true)} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", fontSize: 12 }}>
-            {twoFactorStatus?.twoFactorEnabled ? "2FA enabled" : "Set up 2FA"}
-          </button>
           <button onClick={() => setShowConnect(true)} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--green-border)", background: "var(--green-dim)", color: "var(--green)", fontWeight: 700, fontSize: 12 }}>
             Connect broker
           </button>
@@ -234,15 +212,6 @@ export default function Terminal() {
       </div>
 
       {showConnect && <BrokerConnectModal onClose={() => setShowConnect(false)} onConnected={handleConnected} />}
-      {showTwoFactorSetup && (
-        <TwoFactorSetupModal
-          onClose={() => setShowTwoFactorSetup(false)}
-          onEnabled={() => {
-            setShowTwoFactorSetup(false);
-            setTwoFactorStatus((s) => (s ? { ...s, twoFactorEnabled: true } : s));
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -42,9 +42,9 @@ export default function TermsPage() {
 
           <h2>Account security</h2>
           <p>
-            You're responsible for keeping your sign-in and any broker credentials confidential. We strongly
-            recommend enabling two-factor authentication. If you believe your account has been compromised,
-            disconnect your broker connections and contact your broker directly in addition to us.
+            You're responsible for keeping your sign-in and any broker credentials confidential. If you believe
+            your account has been compromised, disconnect your broker connections and contact your broker
+            directly in addition to us.
           </p>
 
           <h2>Service availability</h2>

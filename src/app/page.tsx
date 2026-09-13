@@ -15,7 +15,7 @@ const FEATURES = [
   { icon: "◱", title: "Real-time charting", body: "Candlestick charts with live-polling bars, multi-symbol tabs, and a clean dark layout built for reading price fast, not for clutter." },
   { icon: "☰", title: "Watchlists that follow you", body: "Add symbols once, see live quotes and % change update automatically, and jump straight into the chart with a click." },
   { icon: "⛨", title: "A real risk engine", body: "Every order passes through server-side risk validation before it reaches your broker, with rejections logged — not just a UI warning you can click past." },
-  { icon: "◉", title: "App-level 2FA", body: "A second, code-based check on top of your sign-in — your own authenticator app, enforced by BerylTerminal itself, independent of any single broker's login." },
+  { icon: "◉", title: "Encrypted broker credentials", body: "Broker API keys are encrypted at rest and scoped to your account only — nothing is stored in plain text, and you can disconnect or forget them at any time." },
   { icon: "≡", title: "One account, two apps", body: "The same sign-in works here and in TradeBeryl, your trading journal — manage billing and profile in one place, trade in the other." },
 ];
 

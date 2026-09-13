@@ -18,7 +18,7 @@ app with a database, real market data, and real broker order execution.
 | IBKR broker adapter | Scaffolded against their real Client Portal Gateway API — needs your running gateway to finish |
 | Auth (signup/login, sessions) | Built and functional |
 | Trading UI (chart, order ticket, positions) | Built and functional — dynamically follows whichever broker/mode you connect, not fixed to one |
-| 2FA | Built and enforced — app-level TOTP on top of Clerk sign-in, blocks the terminal until verified per session |
+| 2FA | Removed — Clerk's own email-based auth is the only sign-in flow now; the app-level TOTP layer (otplib/qrcode) was built but has been taken back out |
 | Watchlist | Built and functional — add/remove symbols, live batched quotes |
 | Order history | Built and functional — Positions/Orders tab in the terminal |
 | Public homepage + legal pages | Built — `/` is the marketing site, `/privacy` and `/terms` are real policy pages, the terminal itself lives at `/terminal` |
