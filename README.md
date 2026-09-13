@@ -11,15 +11,20 @@ app with a database, real market data, and real broker order execution.
 | Architecture (DB schema, risk engine, order lifecycle, audit log) | Built, type-checked |
 | Market data (Twelve Data) | Built — works the moment you add a free API key |
 | Alpaca broker adapter | Built and functional — paper trading works with a free, instant Alpaca signup |
+| Kraken broker adapter | Built and functional — same full method coverage as Alpaca (order modification isn't supported since Kraken's own API doesn't offer it — cancel and re-place instead, same as it would be through Kraken directly) |
+| Coinbase Advanced broker adapter | Built and functional — needs a CDP API key from portal.cdp.coinbase.com |
+| Tradovate broker adapter | Built and functional — needs an API app id/secret from Tradovate's own Settings → API Access |
 | Webull broker adapter | Scaffolded against their real OpenAPI shape — needs your approved App Key/Secret to finish (see below) |
 | IBKR broker adapter | Scaffolded against their real Client Portal Gateway API — needs your running gateway to finish |
 | Auth (signup/login, sessions) | Built and functional |
+| Trading UI (chart, order ticket, positions) | Built and functional — dynamically follows whichever broker/mode you connect, not fixed to one |
 | 2FA | Modeled in the database, not yet enforced in login — flagged as a follow-up, not silently skipped |
 
-Nothing here is faked or simulated data pretending to be real — Alpaca paper trading and
-Twelve Data are genuinely live, wired to their real APIs. Webull and IBKR are real code
-against their real, documented APIs, but I don't have accounts with either, so I can't
-verify those two end-to-end from here — only you can, once you have credentials.
+Nothing here is faked or simulated data pretending to be real — Alpaca, Kraken, Coinbase, and
+Tradovate are genuinely live, wired to their real APIs, same as Twelve Data's market data.
+Webull and IBKR are real code against their real, documented APIs, but I don't have accounts
+with either, so I can't verify those two end-to-end from here — only you can, once you have
+credentials.
 
 ## 1. Get your free credentials (10 minutes, no cost)
 

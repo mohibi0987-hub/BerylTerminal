@@ -3,25 +3,37 @@ import { useEffect, useState } from "react";
 import { useClerk } from "@clerk/nextjs";
 import { Chart } from "@/components/Chart";
 import { OrderTicket } from "@/components/OrderTicket";
-import { BrokerConnectModal } from "@/components/BrokerConnectModal";
+import { BrokerConnectModal, type Broker } from "@/components/BrokerConnectModal";
 
 export default function Home() {
   const { signOut } = useClerk();
   const [symbol, setSymbol] = useState("AAPL");
   const [showConnect, setShowConnect] = useState(false);
+  const [broker, setBroker] = useState<Broker>("ALPACA");
+  const [mode, setMode] = useState<"PAPER" | "LIVE">("PAPER");
   const [account, setAccount] = useState<any>(null);
+  const [positions, setPositions] = useState<any[]>([]);
   const [accountError, setAccountError] = useState<string | null>(null);
 
-  async function refreshAccount() {
-    const res = await fetch("/api/account?broker=ALPACA&mode=PAPER");
+  async function refreshAccount(b: Broker = broker, m: "PAPER" | "LIVE" = mode) {
+    const res = await fetch(`/api/account?broker=${b}&mode=${m}`);
     let json: any = null;
     try { json = await res.json(); } catch { /* non-JSON error body */ }
-    if (!res.ok) { setAccountError(json?.error ?? `Request failed (${res.status})`); setAccount(null); return; }
+    if (!res.ok) { setAccountError(json?.error ?? `Request failed (${res.status})`); setAccount(null); setPositions([]); return; }
     setAccountError(null);
-    setAccount(json);
+    setAccount(json.account);
+    // getPositions() has always worked in every broker adapter — this was
+    // simply never read or displayed before, not a backend gap.
+    setPositions(json.positions ?? []);
   }
 
   useEffect(() => { refreshAccount(); }, []);
+
+  function handleConnected(newBroker: Broker, newMode: "PAPER" | "LIVE") {
+    setBroker(newBroker);
+    setMode(newMode);
+    refreshAccount(newBroker, newMode);
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
@@ -34,7 +46,7 @@ export default function Home() {
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
           {account ? (
             <span className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
-              Alpaca Paper · Equity ${account.account.equity.toLocaleString()} · Buying power ${account.account.buyingPower.toLocaleString()}
+              {broker} {mode === "PAPER" ? "Paper" : "Live"} · Equity ${account.equity.toLocaleString()} · Buying power ${account.buyingPower.toLocaleString()}
             </span>
           ) : (
             <span style={{ fontSize: 12, color: "var(--faint)" }}>{accountError ? "No broker connected" : "Loading…"}</span>
@@ -49,15 +61,40 @@ export default function Home() {
       </div>
 
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Chart symbol={symbol} />
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <Chart symbol={symbol} />
+          </div>
+          <div style={{ borderTop: "1px solid var(--border)", padding: 14, maxHeight: 220, overflowY: "auto" }}>
+            <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.03em", marginBottom: 10 }}>
+              Positions {positions.length > 0 && `(${positions.length})`}
+            </div>
+            {positions.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: "var(--faint)" }}>No open positions on this connection.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {positions.map((p: any) => (
+                  <div key={p.symbol} style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 10px", background: "var(--bg-soft)", borderRadius: 6, fontSize: 12.5 }}>
+                    <span style={{ fontWeight: 700, minWidth: 60 }}>{p.symbol}</span>
+                    <span style={{ color: "var(--muted)" }}>{p.quantity} shares</span>
+                    <span style={{ color: "var(--muted)" }}>Avg ${Number(p.avgPrice ?? 0).toFixed(2)}</span>
+                    {p.marketValue != null && (
+                      <span className="mono" style={{ marginLeft: "auto", color: "var(--muted)" }}>
+                        Mkt value ${Number(p.marketValue).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <div style={{ width: 300, borderLeft: "1px solid var(--border)", padding: 14, background: "var(--bg-soft)" }}>
-          <OrderTicket symbol={symbol} broker="ALPACA" mode="PAPER" />
+          <OrderTicket symbol={symbol} broker={broker} mode={mode} />
         </div>
       </div>
 
-      {showConnect && <BrokerConnectModal onClose={() => setShowConnect(false)} onConnected={refreshAccount} />}
+      {showConnect && <BrokerConnectModal onClose={() => setShowConnect(false)} onConnected={handleConnected} />}
     </div>
   );
 }

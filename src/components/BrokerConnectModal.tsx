@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-type Broker = "ALPACA" | "WEBULL" | "IBKR" | "KRAKEN" | "COINBASE" | "TRADOVATE";
+export type Broker = "ALPACA" | "WEBULL" | "IBKR" | "KRAKEN" | "COINBASE" | "TRADOVATE";
 
 const BROKERS: { id: Broker; name: string; color: string; glyph: string; status: string; statusColor: string; blurb: string; fields: { key: string; label: string; type?: string; textarea?: boolean }[] }[] = [
   { id: "ALPACA", name: "Alpaca", color: "#2DD4A7", glyph: "A", status: "Paper ready", statusColor: "var(--green)", blurb: "Paper trading connects instantly and free. Live trading requires identity verification (1-3 business days).", fields: [{ key: "apiKeyId", label: "API Key ID" }, { key: "apiSecretKey", label: "API Secret Key", type: "password" }] },
@@ -12,7 +12,7 @@ const BROKERS: { id: Broker; name: string; color: string; glyph: string; status:
   { id: "IBKR", name: "Interactive Brokers", color: "#B91C1C", glyph: "IB", status: "Needs gateway", statusColor: "var(--amber)", blurb: "Requires a running Client Portal Gateway logged into your funded/paper IBKR account.", fields: [{ key: "gatewayUrl", label: "Gateway URL" }, { key: "accountId", label: "Account ID" }] },
 ];
 
-export function BrokerConnectModal({ onClose, onConnected }: { onClose: () => void; onConnected: () => void }) {
+export function BrokerConnectModal({ onClose, onConnected }: { onClose: () => void; onConnected: (broker: Broker, mode: "PAPER" | "LIVE") => void }) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Broker | null>(null);
   const [mode, setMode] = useState<"PAPER" | "LIVE">("PAPER");
@@ -36,7 +36,7 @@ export function BrokerConnectModal({ onClose, onConnected }: { onClose: () => vo
     try { json = await res.json(); } catch { /* non-JSON error body — fall through with json=null */ }
     setBusy(false);
     if (!res.ok) { setError(json?.error ?? `Connection failed (${res.status})`); return; }
-    onConnected();
+    onConnected(selected, mode);
     onClose();
   }
 
