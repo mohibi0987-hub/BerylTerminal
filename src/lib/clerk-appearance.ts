@@ -28,6 +28,11 @@ export const clerkAppearance: Appearance = {
     userButtonPopoverActionButtonText: { color: "#E8ECF2" },
     userButtonPopoverActionButtonIcon: { color: "#8A94A6" },
     userButtonPopoverFooter: { display: "none" },
+    // Hides Clerk's own "Secured by Clerk" branding wherever else it
+    // renders (the account/profile modal opened from "Manage account",
+    // and any other Clerk-hosted surface) — this app is fully custom UI
+    // apart from that one hosted modal, so no Clerk branding should show.
+    footer: { display: "none" },
     userButtonAvatarBox: { width: 32, height: 32 },
     modalBackdrop: { backgroundColor: "rgba(4,6,10,.75)" },
     modalContent: { backgroundColor: "#0A0E17" },

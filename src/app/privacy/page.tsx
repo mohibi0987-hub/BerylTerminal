@@ -20,7 +20,7 @@ export default function PrivacyPage() {
 
           <h2>What we collect</h2>
           <ul>
-            <li>Account information: email address, name, and authentication data, handled by our identity provider (Clerk).</li>
+            <li>Account information: email address, name, and authentication data, handled by our identity provider.</li>
             <li>Broker connection details: API keys/credentials you provide are encrypted at rest and used only to place orders and read account data on your behalf.</li>
             <li>Trading activity you generate in the terminal: orders, positions, watchlists, and two-factor settings.</li>
             <li>Standard technical data: IP address, browser type, and basic usage logs for security and reliability.</li>
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
 
           <h2>How your data is stored</h2>
           <p>
-            Broker credentials are encrypted at rest. Authentication is handled by Clerk, our identity provider —
+            Broker credentials are encrypted at rest. Authentication is handled by a dedicated identity provider —
             we don't store your password ourselves. Data is stored with our database provider and is only
             accessible to your own account.
           </p>
