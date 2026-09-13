@@ -8,28 +8,45 @@ export function TwoFactorSetupModal({ onClose, onEnabled }: { onClose: () => voi
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // A server error (500, or any non-2xx with a non-JSON/empty body — a
+  // crashed serverless function, not our own route's own JSON error
+  // response) must never leave `busy` stuck true. Every fetch here is
+  // wrapped so the button always recovers to a real error message.
   async function start() {
     setBusy(true);
-    const res = await fetch("/api/2fa");
-    const data = await res.json();
-    setBusy(false);
-    if (res.ok) { setQrDataUrl(data.qrDataUrl); setSecret(data.secret); }
-    else setError(data.error ?? "Couldn't start setup.");
+    setError(null);
+    try {
+      const res = await fetch("/api/2fa");
+      let data: any = null;
+      try { data = await res.json(); } catch { /* non-JSON error body */ }
+      if (res.ok && data) { setQrDataUrl(data.qrDataUrl); setSecret(data.secret); }
+      else setError(data?.error ?? `Couldn't start setup (${res.status}). Try again in a moment.`);
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function confirm() {
     if (!secret || !code) return;
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/2fa", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ secret, code }),
-    });
-    const data = await res.json();
-    setBusy(false);
-    if (res.ok) onEnabled();
-    else setError(data.error ?? "Couldn't verify that code.");
+    try {
+      const res = await fetch("/api/2fa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ secret, code }),
+      });
+      let data: any = null;
+      try { data = await res.json(); } catch { /* non-JSON error body */ }
+      if (res.ok) onEnabled();
+      else setError(data?.error ?? `Couldn't verify that code (${res.status}). Try again.`);
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -43,8 +60,9 @@ export function TwoFactorSetupModal({ onClose, onEnabled }: { onClose: () => voi
               Adds a code from an authenticator app (Google Authenticator, Authy, 1Password, etc.) as a second step
               required alongside your regular sign-in, checked by this app specifically.
             </div>
+            {error && <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 12 }}>{error}</div>}
             <button onClick={start} disabled={busy} style={{ width: "100%", padding: "10px 0", borderRadius: 8, border: "1px solid var(--green-border)", background: "var(--green-dim)", color: "var(--green)", fontWeight: 700, cursor: "pointer" }}>
-              {busy ? "Generating…" : "Get started"}
+              {busy ? "Generating…" : error ? "Try again" : "Get started"}
             </button>
           </>
         ) : (

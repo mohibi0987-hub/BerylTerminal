@@ -12,19 +12,26 @@ export function OrderTicket({ symbol, broker, mode, onOrderPlaced }: { symbol: s
   async function submit() {
     setBusy(true);
     setResult(null);
-    const res = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        broker, mode, symbol, side, type, quantity: qty,
-        timeInForce: "DAY",
-        limitPrice: type === "LIMIT" ? Number(limitPrice) : undefined,
-      }),
-    });
-    const json = await res.json();
-    setBusy(false);
-    setResult(json.status === "REJECTED" ? `Rejected: ${json.reason}` : `${json.status ?? "Submitted"} — order ${json.order?.id ?? ""}`);
-    if (json.status !== "REJECTED") onOrderPlaced?.();
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          broker, mode, symbol, side, type, quantity: qty,
+          timeInForce: "DAY",
+          limitPrice: type === "LIMIT" ? Number(limitPrice) : undefined,
+        }),
+      });
+      let json: any = null;
+      try { json = await res.json(); } catch { /* non-JSON error body — server-side crash, not our route's own error */ }
+      if (!res.ok || !json) { setResult(`Request failed (${res.status}). Try again in a moment.`); return; }
+      setResult(json.status === "REJECTED" ? `Rejected: ${json.reason}` : `${json.status ?? "Submitted"} — order ${json.order?.id ?? ""}`);
+      if (json.status !== "REJECTED") onOrderPlaced?.();
+    } catch {
+      setResult("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (

@@ -9,15 +9,21 @@ export function TwoFactorVerifyGate({ onVerified }: { onVerified: () => void }) 
   async function verify() {
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/2fa/verify-session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
-    });
-    const data = await res.json();
-    setBusy(false);
-    if (res.ok) onVerified();
-    else setError(data.error ?? "That code didn't work.");
+    try {
+      const res = await fetch("/api/2fa/verify-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      let data: any = null;
+      try { data = await res.json(); } catch { /* non-JSON error body — server-side crash, not our route's own error */ }
+      if (res.ok) onVerified();
+      else setError(data?.error ?? `That code didn't work (${res.status}). Try again.`);
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (

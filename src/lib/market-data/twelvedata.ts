@@ -9,9 +9,16 @@
 // Required env var: TWELVEDATA_API_KEY
 
 import type { Bar, MarketDataService, Quote } from "./types";
+import { getCached, setCached } from "./cache";
 
 const REST_BASE = "https://api.twelvedata.com";
 const WS_URL = "wss://ws.twelvedata.com/v1/quotes/price";
+
+// Matches the Chart component's own 15s poll interval — caching for the
+// same window means a poll that lands on an already-warm cache entry
+// costs zero Twelve Data credits instead of one per request.
+const QUOTE_TTL_MS = 15_000;
+const BARS_TTL_MS = 15_000;
 
 export class TwelveDataService implements MarketDataService {
   constructor(private apiKey: string = process.env.TWELVEDATA_API_KEY ?? "") {
@@ -21,15 +28,25 @@ export class TwelveDataService implements MarketDataService {
   }
 
   async getQuote(symbol: string): Promise<Quote> {
+    const cacheKey = `quote:${symbol}`;
+    const cached = getCached<Quote>(cacheKey);
+    if (cached) return cached;
+
     const res = await fetch(`${REST_BASE}/price?symbol=${encodeURIComponent(symbol)}&apikey=${this.apiKey}`);
     const json = await res.json();
     if (json.status === "error" || json.code) {
       throw new Error(`Twelve Data error for ${symbol}: ${json.message ?? JSON.stringify(json)}`);
     }
-    return { symbol, price: parseFloat(json.price), timestamp: new Date().toISOString() };
+    const quote: Quote = { symbol, price: parseFloat(json.price), timestamp: new Date().toISOString() };
+    setCached(cacheKey, quote, QUOTE_TTL_MS);
+    return quote;
   }
 
   async getBars(symbol: string, interval: string, outputSize = 100): Promise<Bar[]> {
+    const cacheKey = `bars:${symbol}:${interval}:${outputSize}`;
+    const cached = getCached<Bar[]>(cacheKey);
+    if (cached) return cached;
+
     const url = `${REST_BASE}/time_series?symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=${outputSize}&apikey=${this.apiKey}`;
     const res = await fetch(url);
     const json = await res.json();
@@ -37,7 +54,7 @@ export class TwelveDataService implements MarketDataService {
       throw new Error(`Twelve Data error for ${symbol}: ${json.message ?? JSON.stringify(json)}`);
     }
     const values = (json.values ?? []) as any[];
-    return values
+    const bars = values
       .map((v) => ({
         timestamp: v.datetime,
         open: parseFloat(v.open),
@@ -47,6 +64,8 @@ export class TwelveDataService implements MarketDataService {
         volume: parseFloat(v.volume ?? "0"),
       }))
       .reverse(); // Twelve Data returns newest-first; charts want oldest-first
+    setCached(cacheKey, bars, BARS_TTL_MS);
+    return bars;
   }
 
   // Node's `ws` package is required server-side for this (browsers use native WebSocket instead —
