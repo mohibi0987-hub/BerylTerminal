@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type MouseEvent } from "react";
-import { useClerk } from "@clerk/nextjs";
+import { UserButton } from "@clerk/nextjs";
+import { clerkAppearance } from "@/lib/clerk-appearance";
 import { Chart } from "@/components/Chart";
 import { OrderTicket } from "@/components/OrderTicket";
 import { BrokerConnectModal, type Broker } from "@/components/BrokerConnectModal";
@@ -19,10 +20,8 @@ const STATUS_COLOR: Record<string, string> = {
   RISK_VALIDATION: "var(--muted)",
 };
 
-const TRADEBERYL_URL = process.env.NEXT_PUBLIC_TRADEBERYL_URL ?? "https://tradeberyl.com";
 
 export default function Terminal() {
-  const { signOut } = useClerk();
   const [symbol, setSymbol] = useState("AAPL");
   const [openSymbols, setOpenSymbols] = useState<string[]>(["AAPL"]);
   const [showConnect, setShowConnect] = useState(false);
@@ -133,16 +132,7 @@ export default function Terminal() {
           <button onClick={() => setShowConnect(true)} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--green-border)", background: "var(--green-dim)", color: "var(--green)", fontWeight: 700, fontSize: 12 }}>
             Connect broker
           </button>
-          <a
-            href={`${TRADEBERYL_URL}/account`}
-            title="Manage your shared BerylTerminal / TradeBeryl account"
-            style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", fontSize: 12, textDecoration: "none" }}
-          >
-            Account
-          </a>
-          <button onClick={() => signOut({ redirectUrl: "/login" })} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", fontSize: 12 }}>
-            Sign out
-          </button>
+          <UserButton afterSignOutUrl="/login" appearance={clerkAppearance} />
         </div>
       </div>
 

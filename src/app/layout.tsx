@@ -1,5 +1,6 @@
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
+import { clerkAppearance } from "@/lib/clerk-appearance";
 
 export const metadata = {
   title: "BerylTerminal — Multi-broker trading terminal",
@@ -20,7 +21,7 @@ const satelliteProps: Record<string, unknown> =
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider {...(satelliteProps as object)}>
+    <ClerkProvider appearance={clerkAppearance} {...(satelliteProps as object)}>
       <html lang="en">
         <body>{children}</body>
       </html>

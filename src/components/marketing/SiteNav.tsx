@@ -1,4 +1,5 @@
-const TRADEBERYL_URL = process.env.NEXT_PUBLIC_TRADEBERYL_URL ?? "https://tradeberyl.com";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { clerkAppearance } from "@/lib/clerk-appearance";
 
 export function SiteNav() {
   return (
@@ -12,12 +13,16 @@ export function SiteNav() {
           <a href="/#brokers">Brokers</a>
           <a href="/#features">Features</a>
           <a href="/#pricing">Pricing</a>
-          <a href={`${TRADEBERYL_URL}`} target="_blank" rel="noreferrer">TradeBeryl</a>
         </nav>
         <div className="spacer">
-          <a href={`${TRADEBERYL_URL}/account`} className="btn btn-ghost">Account</a>
-          <a href="/login" className="btn btn-ghost">Sign in</a>
-          <a href="/login" className="btn btn-primary">Launch Terminal</a>
+          <SignedIn>
+            <a href="/terminal" className="btn btn-ghost">Terminal</a>
+            <UserButton afterSignOutUrl="/" appearance={clerkAppearance} />
+          </SignedIn>
+          <SignedOut>
+            <a href="/login" className="btn btn-ghost">Sign in</a>
+            <a href="/login" className="btn btn-primary">Launch Terminal</a>
+          </SignedOut>
         </div>
       </div>
     </header>
