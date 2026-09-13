@@ -7,6 +7,17 @@ import { OrderTicket } from "@/components/OrderTicket";
 import { BrokerConnectModal, type Broker } from "@/components/BrokerConnectModal";
 import { Watchlist } from "@/components/Watchlist";
 
+// Twelve Data's actual supported interval values for /time_series.
+const TIMEFRAMES = [
+  { label: "1m", value: "1min" },
+  { label: "5m", value: "5min" },
+  { label: "15m", value: "15min" },
+  { label: "1H", value: "1h" },
+  { label: "4H", value: "4h" },
+  { label: "1D", value: "1day" },
+  { label: "1W", value: "1week" },
+];
+
 const STATUS_COLOR: Record<string, string> = {
   FILLED: "var(--green)",
   PARTIALLY_FILLED: "var(--amber, #f5a623)",
@@ -22,6 +33,7 @@ const STATUS_COLOR: Record<string, string> = {
 export default function Terminal() {
   const [symbol, setSymbol] = useState("AAPL");
   const [openSymbols, setOpenSymbols] = useState<string[]>(["AAPL"]);
+  const [timeframe, setTimeframe] = useState("1min");
   const [showConnect, setShowConnect] = useState(false);
   const [broker, setBroker] = useState<Broker>("ALPACA");
   const [mode, setMode] = useState<"PAPER" | "LIVE">("PAPER");
@@ -139,8 +151,23 @@ export default function Terminal() {
 
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          <div style={{ height: 34, display: "flex", alignItems: "center", gap: 2, padding: "0 10px", borderBottom: "1px solid var(--border)" }}>
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf.value}
+                onClick={() => setTimeframe(tf.value)}
+                style={{
+                  padding: "4px 9px", borderRadius: 5, border: "none", fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+                  background: timeframe === tf.value ? "var(--panel2)" : "transparent",
+                  color: timeframe === tf.value ? "var(--text)" : "var(--muted)",
+                }}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
           <div style={{ flex: 1, minHeight: 0 }}>
-            <Chart symbol={symbol} />
+            <Chart symbol={symbol} interval={timeframe} />
           </div>
           <div style={{ borderTop: "1px solid var(--border)", padding: 14, maxHeight: 220, overflowY: "auto" }}>
             <div style={{ display: "flex", gap: 14, marginBottom: 10 }}>
