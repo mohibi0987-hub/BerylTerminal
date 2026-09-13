@@ -18,7 +18,10 @@ app with a database, real market data, and real broker order execution.
 | IBKR broker adapter | Scaffolded against their real Client Portal Gateway API — needs your running gateway to finish |
 | Auth (signup/login, sessions) | Built and functional |
 | Trading UI (chart, order ticket, positions) | Built and functional — dynamically follows whichever broker/mode you connect, not fixed to one |
-| 2FA | Modeled in the database, not yet enforced in login — flagged as a follow-up, not silently skipped |
+| 2FA | Built and enforced — app-level TOTP on top of Clerk sign-in, blocks the terminal until verified per session |
+| Watchlist | Built and functional — add/remove symbols, live batched quotes |
+| Order history | Built and functional — Positions/Orders tab in the terminal |
+| Public homepage + legal pages | Built — `/` is the marketing site, `/privacy` and `/terms` are real policy pages, the terminal itself lives at `/terminal` |
 
 Nothing here is faked or simulated data pretending to be real — Alpaca, Kraken, Coinbase, and
 Tradovate are genuinely live, wired to their real APIs, same as Twelve Data's market data.
@@ -88,3 +91,44 @@ changes. Before you flip that switch on any account you're funding: place severa
 trades first and actually read the audit log / order state history to confirm the risk
 engine is rejecting what it should and filling what it should. That verification step is
 the whole reason the paper path exists — skipping it is the one shortcut worth not taking.
+
+## Routes
+
+- `/` — public marketing homepage (no sign-in required)
+- `/login` — sign in / create account
+- `/privacy`, `/terms` — public legal pages
+- `/terminal` — the actual trading terminal (requires sign-in; this used to be the root page)
+- `/api/*` — all backend routes, all require sign-in
+
+## Shared account with TradeBeryl (tradeberyl.com)
+
+BerylTerminal and TradeBeryl are meant to share one identity: sign in on either, and you're
+signed in on both. This is Clerk's own **satellite domain** feature, not custom code — TradeBeryl
+is the primary domain (it owns account/billing settings), BerylTerminal runs as the satellite.
+
+**Before you turn this on, both apps need production Clerk keys — you mentioned both are still
+on development keys, so do this first:**
+
+1. In the Clerk Dashboard, open each app (BerylTerminal and TradeBeryl) → **Production** tab →
+   add your real domain.
+2. Add the DNS records Clerk gives you at your registrar, then **wait until Clerk shows
+   "Verified"** for both domains before touching anything else. This is the step that broke
+   things last time it was tried — don't skip the wait.
+3. Copy the new `pk_live_...` / `sk_live_...` keys into **Vercel's Environment Variables**
+   (Production scope) for both projects, then redeploy both.
+
+**Then, to link the two as one account:**
+
+4. In Clerk, both apps must be the *same application* (same key pair) — TradeBeryl's `.env`
+   should use the identical `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` as this app.
+5. In BerylTerminal's Vercel env vars, set:
+   - `NEXT_PUBLIC_CLERK_IS_SATELLITE=true`
+   - `NEXT_PUBLIC_CLERK_DOMAIN=https://berylterminal.vercel.app` (or your custom domain)
+   - `NEXT_PUBLIC_CLERK_SIGN_IN_URL=https://tradeberyl.com/login`
+   - `NEXT_PUBLIC_TRADEBERYL_URL=https://tradeberyl.com` (controls where the "Account" link and
+     nav point)
+6. TradeBeryl itself needs no satellite config — it's the primary. It just needs its own
+   Clerk production keys live (step 1–3 above).
+
+Until all of that is done, leave `NEXT_PUBLIC_CLERK_IS_SATELLITE` unset — each app will keep
+using its own separate session, which is what's running today.

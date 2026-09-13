@@ -25,7 +25,7 @@ export default function LoginPage() {
       const attempt = await signIn.create({ identifier: email, password });
       if (attempt.status === "complete") {
         await setActiveSignIn({ session: attempt.createdSessionId });
-        router.push("/");
+        router.push("/terminal");
         return;
       }
 
@@ -75,7 +75,7 @@ export default function LoginPage() {
         const attempt = await signIn.attemptSecondFactor({ strategy: "email_code", code });
         if (attempt.status === "complete") {
           await setActiveSignIn({ session: attempt.createdSessionId });
-          router.push("/");
+          router.push("/terminal");
           return;
         }
         setError("That code didn't work — check it and try again.");
@@ -84,7 +84,7 @@ export default function LoginPage() {
         const attempt = await signUp.attemptEmailAddressVerification({ code });
         if (attempt.status === "complete") {
           await setActiveSignUp({ session: attempt.createdSessionId });
-          router.push("/");
+          router.push("/terminal");
           return;
         }
         setError("That code didn't work — check it and try again.");
@@ -105,10 +105,10 @@ export default function LoginPage() {
   return (
     <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}>
       <div style={{ width: 360, background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 12, padding: 24 }}>
-        <div className="disp" style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 18, marginBottom: 18, justifyContent: "center" }}>
+        <a href="/" className="disp" style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 18, marginBottom: 18, justifyContent: "center", textDecoration: "none", color: "var(--text)" }}>
           <span style={{ width: 10, height: 10, borderRadius: 3, background: "var(--green)", boxShadow: "0 0 12px rgba(45,212,167,.65)" }} />
           BerylTerminal
-        </div>
+        </a>
 
         {!verifying && (
           <div style={{ display: "flex", marginBottom: 16, borderBottom: "1px solid var(--border)" }}>

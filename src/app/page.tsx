@@ -1,203 +1,109 @@
-"use client";
-import { useEffect, useState } from "react";
-import { useClerk } from "@clerk/nextjs";
-import { Chart } from "@/components/Chart";
-import { OrderTicket } from "@/components/OrderTicket";
-import { BrokerConnectModal, type Broker } from "@/components/BrokerConnectModal";
-import { Watchlist } from "@/components/Watchlist";
-import { TwoFactorSetupModal } from "@/components/TwoFactorSetupModal";
-import { TwoFactorVerifyGate } from "@/components/TwoFactorVerifyGate";
+import { SiteNav } from "@/components/marketing/SiteNav";
+import { SiteFooter } from "@/components/marketing/SiteFooter";
 
-const STATUS_COLOR: Record<string, string> = {
-  FILLED: "var(--green)",
-  PARTIALLY_FILLED: "var(--amber, #f5a623)",
-  REJECTED: "var(--red)",
-  CANCELLED: "var(--muted)",
-  SUBMITTED: "var(--blue, #5b8def)",
-  BROKER_ACCEPTED: "var(--blue, #5b8def)",
-  CREATED: "var(--muted)",
-  RISK_VALIDATION: "var(--muted)",
-};
+const BROKERS = [
+  { id: "ALPACA", name: "Alpaca" },
+  { id: "KRAKEN", name: "Kraken" },
+  { id: "COINBASE", name: "Coinbase" },
+  { id: "TRADOVATE", name: "Tradovate" },
+  { id: "WEBULL", name: "Webull" },
+  { id: "IBKR", name: "Interactive Brokers" },
+];
 
-export default function Home() {
-  const { signOut } = useClerk();
-  const [symbol, setSymbol] = useState("AAPL");
-  const [showConnect, setShowConnect] = useState(false);
-  const [broker, setBroker] = useState<Broker>("ALPACA");
-  const [mode, setMode] = useState<"PAPER" | "LIVE">("PAPER");
-  const [account, setAccount] = useState<any>(null);
-  const [positions, setPositions] = useState<any[]>([]);
-  const [accountError, setAccountError] = useState<string | null>(null);
-  const [bottomTab, setBottomTab] = useState<"positions" | "orders">("positions");
-  const [orders, setOrders] = useState<any[] | null>(null);
-  const [twoFactorStatus, setTwoFactorStatus] = useState<{ twoFactorEnabled: boolean; needsVerification: boolean } | null>(null);
-  const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
+const FEATURES = [
+  { icon: "⇄", title: "One terminal, six brokers", body: "Alpaca, Kraken, Coinbase, Tradovate, Webull, and Interactive Brokers — connect any of them and route real orders from the same screen, paper or live." },
+  { icon: "◱", title: "Real-time charting", body: "Candlestick charts with live-polling bars, multi-symbol tabs, and a clean dark layout built for reading price fast, not for clutter." },
+  { icon: "☰", title: "Watchlists that follow you", body: "Add symbols once, see live quotes and % change update automatically, and jump straight into the chart with a click." },
+  { icon: "⛨", title: "A real risk engine", body: "Every order passes through server-side risk validation before it reaches your broker, with rejections logged — not just a UI warning you can click past." },
+  { icon: "◉", title: "App-level 2FA", body: "A second, code-based check on top of your sign-in — your own authenticator app, enforced by BerylTerminal itself, independent of any single broker's login." },
+  { icon: "≡", title: "One account, two apps", body: "The same sign-in works here and in TradeBeryl, your trading journal — manage billing and profile in one place, trade in the other." },
+];
 
-  useEffect(() => {
-    fetch("/api/2fa/verify-session").then((res) => res.json()).then(setTwoFactorStatus).catch(() => setTwoFactorStatus({ twoFactorEnabled: false, needsVerification: false }));
-  }, []);
-
-  async function refreshAccount(b: Broker = broker, m: "PAPER" | "LIVE" = mode) {
-    const res = await fetch(`/api/account?broker=${b}&mode=${m}`);
-    let json: any = null;
-    try { json = await res.json(); } catch { /* non-JSON error body */ }
-    if (!res.ok) { setAccountError(json?.error ?? `Request failed (${res.status})`); setAccount(null); setPositions([]); return; }
-    setAccountError(null);
-    setAccount(json.account);
-    // getPositions() has always worked in every broker adapter — this was
-    // simply never read or displayed before, not a backend gap.
-    setPositions(json.positions ?? []);
-  }
-
-  // The GET /api/orders route already existed and already worked — this
-  // was purely a missing display, same story as positions above.
-  async function refreshOrders() {
-    const res = await fetch("/api/orders");
-    if (!res.ok) return;
-    const data = await res.json();
-    setOrders(data);
-  }
-
-  useEffect(() => { refreshAccount(); }, []);
-  useEffect(() => { if (bottomTab === "orders" && orders === null) refreshOrders(); }, [bottomTab]);
-
-  function handleConnected(newBroker: Broker, newMode: "PAPER" | "LIVE") {
-    setBroker(newBroker);
-    setMode(newMode);
-    refreshAccount(newBroker, newMode);
-  }
-
-  function handleOrderPlaced() {
-    // An order was just submitted from the ticket — refresh both views
-    // so the new order/updated position shows up without a manual reload.
-    refreshAccount();
-    if (bottomTab === "orders") refreshOrders();
-    setOrders(null);
-  }
-
-  function handleTwoFactorVerified() {
-    setTwoFactorStatus((s) => (s ? { ...s, needsVerification: false } : s));
-  }
-
-  // Blocks the whole terminal, not just a banner — if this account has
-  // 2FA enabled and this specific session hasn't passed it yet, nothing
-  // else renders until it does.
-  if (twoFactorStatus?.needsVerification) {
-    return <TwoFactorVerifyGate onVerified={handleTwoFactorVerified} />;
-  }
-
+export default function HomePage() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <div style={{ height: 54, display: "flex", alignItems: "center", gap: 16, padding: "0 16px", borderBottom: "1px solid var(--border)", background: "var(--bg-soft)" }}>
-        <div className="disp" style={{ fontWeight: 700, fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 3, background: "var(--green)", boxShadow: "0 0 12px rgba(45,212,167,.65)" }} />
-          BerylTerminal
-        </div>
-        <input value={symbol} onChange={(e) => setSymbol(e.target.value.toUpperCase())} style={{ width: 100 }} />
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-          {account ? (
-            <span className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
-              {broker} {mode === "PAPER" ? "Paper" : "Live"} · Equity ${account.equity.toLocaleString()} · Buying power ${account.buyingPower.toLocaleString()}
-            </span>
-          ) : (
-            <span style={{ fontSize: 12, color: "var(--faint)" }}>{accountError ? "No broker connected" : "Loading…"}</span>
-          )}
-          <button onClick={() => setShowTwoFactorSetup(true)} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", fontSize: 12 }}>
-            {twoFactorStatus?.twoFactorEnabled ? "2FA enabled" : "Set up 2FA"}
-          </button>
-          <button onClick={() => setShowConnect(true)} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--green-border)", background: "var(--green-dim)", color: "var(--green)", fontWeight: 700, fontSize: 12 }}>
-            Connect broker
-          </button>
-          <button onClick={() => signOut({ redirectUrl: "/login" })} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", fontSize: 12 }}>
-            Sign out
-          </button>
-        </div>
-      </div>
+    <div className="site">
+      <SiteNav />
 
-      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <Chart symbol={symbol} />
+      <section className="hero">
+        <div className="container">
+          <h1>One terminal.<br />Every broker, every market.</h1>
+          <p className="lede">
+            BerylTerminal connects to the brokers you already use — stocks, crypto, and futures — so you can chart,
+            watchlist, and execute from a single screen instead of six different tabs.
+          </p>
+          <div className="cta-row">
+            <a href="/login" className="btn btn-primary">Launch Terminal</a>
+            <a href="#brokers" className="btn btn-ghost">See supported brokers</a>
           </div>
-          <div style={{ borderTop: "1px solid var(--border)", padding: 14, maxHeight: 220, overflowY: "auto" }}>
-            <div style={{ display: "flex", gap: 14, marginBottom: 10 }}>
-              <button
-                onClick={() => setBottomTab("positions")}
-                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.03em", color: bottomTab === "positions" ? "var(--text)" : "var(--muted)", fontWeight: bottomTab === "positions" ? 700 : 400 }}
-              >
-                Positions {positions.length > 0 && `(${positions.length})`}
-              </button>
-              <button
-                onClick={() => setBottomTab("orders")}
-                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.03em", color: bottomTab === "orders" ? "var(--text)" : "var(--muted)", fontWeight: bottomTab === "orders" ? 700 : 400 }}
-              >
-                Orders {orders && orders.length > 0 && `(${orders.length})`}
-              </button>
+
+          <div className="mock" aria-hidden="true">
+            <div className="mock-bar">
+              <span className="mock-dot" /><span className="mock-dot" /><span className="mock-dot" />
+              <span className="mono" style={{ marginLeft: 10, fontSize: 11.5, color: "var(--muted)" }}>AAPL · 1m · Alpaca Paper</span>
             </div>
-
-            {bottomTab === "positions" && (
-              positions.length === 0 ? (
-                <div style={{ fontSize: 12.5, color: "var(--faint)" }}>No open positions on this connection.</div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {positions.map((p: any) => (
-                    <div key={p.symbol} style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 10px", background: "var(--bg-soft)", borderRadius: 6, fontSize: 12.5 }}>
-                      <span style={{ fontWeight: 700, minWidth: 60 }}>{p.symbol}</span>
-                      <span style={{ color: "var(--muted)" }}>{p.quantity} shares</span>
-                      <span style={{ color: "var(--muted)" }}>Avg ${Number(p.avgPrice ?? 0).toFixed(2)}</span>
-                      {p.marketValue != null && (
-                        <span className="mono" style={{ marginLeft: "auto", color: "var(--muted)" }}>
-                          Mkt value ${Number(p.marketValue).toLocaleString()}
-                        </span>
-                      )}
-                    </div>
+            <div className="mock-body">
+              <div className="mock-chart">
+                <div className="mock-candles">
+                  {[62, 74, 58, 80, 66, 90, 84, 70, 96, 78, 88, 60, 72, 94, 82, 68, 100, 76, 86, 64].map((h, i) => (
+                    <i key={i} className={i % 3 === 0 ? "dn" : ""} style={{ height: `${h}%` }} />
                   ))}
                 </div>
-              )
-            )}
-
-            {bottomTab === "orders" && (
-              orders === null ? (
-                <div style={{ fontSize: 12.5, color: "var(--faint)" }}>Loading…</div>
-              ) : orders.length === 0 ? (
-                <div style={{ fontSize: 12.5, color: "var(--faint)" }}>No orders placed yet.</div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {orders.map((o: any) => (
-                    <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 10px", background: "var(--bg-soft)", borderRadius: 6, fontSize: 12.5 }}>
-                      <span style={{ fontWeight: 700, minWidth: 60 }}>{o.instrument?.symbol}</span>
-                      <span style={{ color: o.side === "BUY" ? "var(--green)" : "var(--red)", minWidth: 40 }}>{o.side}</span>
-                      <span style={{ color: "var(--muted)" }}>{o.quantity} @ {o.type === "MARKET" ? "MKT" : `$${o.limitPrice}`}</span>
-                      <span style={{ color: STATUS_COLOR[o.status] ?? "var(--muted)", fontSize: 11 }}>{o.status.replace(/_/g, " ")}</span>
-                      {o.rejectReason && <span style={{ color: "var(--red)", fontSize: 11 }} title={o.rejectReason}>⚠</span>}
-                      <span className="mono" style={{ marginLeft: "auto", color: "var(--faint)", fontSize: 11 }}>
-                        {new Date(o.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
+              </div>
+              <div className="mock-side">
+                <div style={{ fontSize: 10.5, color: "var(--faint)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 2 }}>Watchlist</div>
+                <div className="mock-row hi"><span><b>AAPL</b></span><span style={{ color: "var(--green)" }}>+1.42%</span></div>
+                <div className="mock-row"><span><b>MSFT</b></span><span style={{ color: "var(--green)" }}>+0.63%</span></div>
+                <div className="mock-row"><span><b>NVDA</b></span><span style={{ color: "var(--red)" }}>-0.88%</span></div>
+                <div className="mock-row"><span><b>BTC/USD</b></span><span style={{ color: "var(--green)" }}>+2.11%</span></div>
+                <div style={{ marginTop: 8, fontSize: 10.5, color: "var(--faint)", textTransform: "uppercase", letterSpacing: ".04em" }}>Order ticket</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <div style={{ flex: 1, textAlign: "center", padding: "6px 0", borderRadius: 6, background: "var(--green-dim)", color: "var(--green)", fontSize: 11, fontWeight: 700 }}>Buy</div>
+                  <div style={{ flex: 1, textAlign: "center", padding: "6px 0", borderRadius: 6, border: "1px solid var(--border)", color: "var(--muted)", fontSize: 11, fontWeight: 700 }}>Sell</div>
                 </div>
-              )
-            )}
+              </div>
+            </div>
           </div>
         </div>
-        <div style={{ width: 300, borderLeft: "1px solid var(--border)", padding: 14, background: "var(--bg-soft)", display: "flex", flexDirection: "column", gap: 18, overflowY: "auto" }}>
-          <Watchlist onSelectSymbol={setSymbol} />
-          <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
-            <OrderTicket symbol={symbol} broker={broker} mode={mode} onOrderPlaced={handleOrderPlaced} />
-          </div>
+      </section>
+
+      <div className="trust-strip" id="brokers">
+        <div className="container">
+          {BROKERS.map((b) => <span key={b.id}>{b.name}</span>)}
         </div>
       </div>
 
-      {showConnect && <BrokerConnectModal onClose={() => setShowConnect(false)} onConnected={handleConnected} />}
-      {showTwoFactorSetup && (
-        <TwoFactorSetupModal
-          onClose={() => setShowTwoFactorSetup(false)}
-          onEnabled={() => {
-            setShowTwoFactorSetup(false);
-            setTwoFactorStatus((s) => (s ? { ...s, twoFactorEnabled: true } : s));
-          }}
-        />
-      )}
+      <section className="section" id="features">
+        <div className="container">
+          <h2>Built like a real trading desk</h2>
+          <p className="sub">Not a demo. Every feature below talks to a real broker connection or a real risk check on the backend.</p>
+          <div className="feature-grid">
+            {FEATURES.map((f) => (
+              <div className="feature-card" key={f.title}>
+                <div className="icon">{f.icon}</div>
+                <h3>{f.title}</h3>
+                <p>{f.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section" id="pricing" style={{ paddingTop: 0 }}>
+        <div className="container">
+          <h2>Start on paper. Go live when you're ready.</h2>
+          <p className="sub">Paper trading is free on every supported broker. Connect a live account whenever you want to trade for real.</p>
+        </div>
+      </section>
+
+      <div className="cta-band">
+        <div className="container">
+          <h2>Your terminal is one sign-in away.</h2>
+          <p>Free to start, no card required for paper trading.</p>
+          <a href="/login" className="btn btn-primary">Launch Terminal</a>
+        </div>
+      </div>
+
+      <SiteFooter />
     </div>
   );
 }
