@@ -6,6 +6,15 @@ import type { Appearance } from "@clerk/types";
 // (hex, not var(...)) since this object is handed to Clerk's own styling
 // engine rather than rendered through our stylesheet.
 export const clerkAppearance: Appearance = {
+  layout: {
+    // Hides Clerk's "Development mode" banner. This is purely cosmetic —
+    // it does NOT change any of the real dev-instance limitations (usage
+    // caps, relaxed security posture, etc.) described in README.md. Clerk
+    // deliberately prefixes this flag "unsafe_" to discourage using it as
+    // a way to forget you're still on dev keys — re-check this once the
+    // satellite-domain/production-keys migration happens.
+    unsafe_disableDevelopmentModeWarnings: true,
+  },
   variables: {
     colorBackground: "#10151F", // --panel
     colorInputBackground: "#151B27", // --panel2
