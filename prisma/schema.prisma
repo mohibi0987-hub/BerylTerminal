@@ -18,6 +18,7 @@ enum BrokerName {
   COINBASE
   TRADOVATE
   BINANCE_US
+  GEMINI
 }
 
 enum BrokerConnectionStatus {

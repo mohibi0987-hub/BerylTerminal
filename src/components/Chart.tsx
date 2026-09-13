@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { createChart, ColorType, type UTCTimestamp, type ISeriesApi, type IChartApi } from "lightweight-charts";
+import { createChart, ColorType, type UTCTimestamp, type ISeriesApi, type IChartApi, type IPriceLine } from "lightweight-charts";
 
 type Bar = { timestamp: string; open: number; high: number; low: number; close: number; volume: number };
 
@@ -38,12 +38,31 @@ export function Chart({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const priceLinesRef = useRef<IPriceLine[]>([]);
   const barsRef = useRef<Bar[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [readout, setReadout] = useState<{ last: number; change: number; changePct: number } | null>(null);
   // "All" by default — a specific range only narrows the view once bars
   // are loaded; it never changes what's fetched, so it costs nothing extra.
   const [activeRange, setActiveRange] = useState<string>("All");
+  // Horizontal price lines — the one drawing tool lightweight-charts v4
+  // actually supports natively (via createPriceLine). Real freehand
+  // trendlines/fib retracements need a custom canvas overlay (or the v5
+  // Series Primitives API, which this project isn't on) — that's a
+  // meaningfully bigger build, not something to half-fake here.
+  const [drawMode, setDrawMode] = useState(false);
+  const [lineCount, setLineCount] = useState(0);
+  const drawModeRef = useRef(false);
+  useEffect(() => { drawModeRef.current = drawMode; }, [drawMode]);
+
+  function clearLines() {
+    const series = seriesRef.current;
+    if (!series) return;
+    priceLinesRef.current.forEach((line) => series.removePriceLine(line));
+    priceLinesRef.current = [];
+    setLineCount(0);
+  }
 
   function applyRange(days: number | null) {
     const chart = chartRef.current;
@@ -84,6 +103,26 @@ export function Chart({
       upColor: "#2DD4A7", downColor: "#FF5C7A", borderVisible: false,
       wickUpColor: "#2DD4A7", wickDownColor: "#FF5C7A",
     });
+    seriesRef.current = series;
+    priceLinesRef.current = [];
+    setLineCount(0);
+
+    function handleChartClick(param: any) {
+      if (!drawModeRef.current || !param.point) return;
+      const price = series.coordinateToPrice(param.point.y);
+      if (price == null) return;
+      const line = series.createPriceLine({
+        price,
+        color: "#F5A623",
+        lineWidth: 1,
+        lineStyle: 2, // dashed
+        axisLabelVisible: true,
+        title: price.toFixed(2),
+      });
+      priceLinesRef.current.push(line);
+      setLineCount(priceLinesRef.current.length);
+    }
+    chart.subscribeClick(handleChartClick);
 
     // Volume as a squeezed-in bottom subpane, same visual convention as
     // TradingView's default layout — shares the chart's own price scale
@@ -153,8 +192,10 @@ export function Chart({
       cancelled = true;
       clearInterval(poll);
       window.removeEventListener("resize", onResize);
+      chart.unsubscribeClick(handleChartClick);
       chart.remove();
       chartRef.current = null;
+      seriesRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, interval, showVolume, showSma20, showSma50]);
@@ -201,6 +242,23 @@ export function Chart({
             {r.label}
           </button>
         ))}
+        <span style={{ width: 1, height: 14, background: "var(--border)", margin: "0 6px" }} />
+        <button
+          onClick={() => setDrawMode((v) => !v)}
+          title="Click the chart to drop a horizontal price line"
+          style={{
+            padding: "2px 8px", borderRadius: 4, border: "1px solid var(--border)", fontSize: 10.5, fontWeight: 700, cursor: "pointer",
+            background: drawMode ? "var(--green-dim)" : "transparent",
+            color: drawMode ? "var(--green)" : "var(--faint)",
+          }}
+        >
+          {drawMode ? "Drawing…" : "+ Line"}
+        </button>
+        {lineCount > 0 && (
+          <button onClick={clearLines} style={{ padding: "2px 8px", borderRadius: 4, border: "1px solid var(--border)", fontSize: 10.5, fontWeight: 700, cursor: "pointer", background: "transparent", color: "var(--faint)" }}>
+            Clear ({lineCount})
+          </button>
+        )}
       </div>
     </div>
   );

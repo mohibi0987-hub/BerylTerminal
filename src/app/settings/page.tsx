@@ -9,6 +9,7 @@ const BROKER_LABELS: Record<string, string> = {
   WEBULL: "Webull",
   IBKR: "Interactive Brokers",
   BINANCE_US: "Binance.US",
+  GEMINI: "Gemini",
 };
 
 type Connection = {

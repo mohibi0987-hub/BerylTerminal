@@ -9,10 +9,11 @@ const BROKERS = [
   { id: "WEBULL", name: "Webull" },
   { id: "IBKR", name: "Interactive Brokers" },
   { id: "BINANCE_US", name: "Binance.US" },
+  { id: "GEMINI", name: "Gemini" },
 ];
 
 const FEATURES = [
-  { icon: "⇄", title: "One terminal, seven brokers", body: "Alpaca, Kraken, Coinbase, Tradovate, Webull, Binance.US, and Interactive Brokers — connect any of them and route real orders from the same screen, paper or live." },
+  { icon: "⇄", title: "One terminal, eight brokers", body: "Alpaca, Kraken, Coinbase, Tradovate, Webull, Binance.US, Gemini, and Interactive Brokers — connect any of them and route real orders from the same screen, paper or live." },
   { icon: "◱", title: "Real-time charting", body: "Candlestick charts with live-polling bars, multi-symbol tabs, and a clean dark layout built for reading price fast, not for clutter." },
   { icon: "☰", title: "Watchlists that follow you", body: "Add symbols once, see live quotes and % change update automatically, and jump straight into the chart with a click." },
   { icon: "⛨", title: "A real risk engine", body: "Every order passes through server-side risk validation before it reaches your broker, with rejections logged — not just a UI warning you can click past." },

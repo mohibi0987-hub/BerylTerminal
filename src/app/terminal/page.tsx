@@ -6,6 +6,7 @@ import { Chart } from "@/components/Chart";
 import { OrderTicket } from "@/components/OrderTicket";
 import { BrokerConnectModal, type Broker } from "@/components/BrokerConnectModal";
 import { Watchlist } from "@/components/Watchlist";
+import { SymbolSearch } from "@/components/SymbolSearch";
 
 // Twelve Data's actual supported interval values for /time_series.
 const TIMEFRAMES = [
@@ -108,12 +109,7 @@ export default function Terminal() {
           <span style={{ width: 10, height: 10, borderRadius: 3, background: "var(--green)", boxShadow: "0 0 12px rgba(45,212,167,.65)" }} />
           BerylTerminal
         </a>
-        <input
-          value={symbol}
-          onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-          onKeyDown={(e) => e.key === "Enter" && openSymbol(symbol)}
-          style={{ width: 100 }}
-        />
+        <SymbolSearch value={symbol} onChange={setSymbol} onSelect={openSymbol} />
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
           {account ? (
             <span className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
