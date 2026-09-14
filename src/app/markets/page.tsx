@@ -5,6 +5,7 @@ import { UserButton } from "@clerk/nextjs";
 import { clerkAppearance } from "@/lib/clerk-appearance";
 import { Watchlist } from "@/components/Watchlist";
 import { SymbolSearch } from "@/components/SymbolSearch";
+import { AppNav } from "@/components/AppNav";
 
 // Curated symbol lists, not a real market-wide screener — Twelve Data's
 // current plan here doesn't support scanning the whole market, and this
@@ -85,12 +86,13 @@ export default function MarketsPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#0A0E17", color: "var(--text)" }}>
-      <div style={{ height: 54, display: "flex", alignItems: "center", gap: 16, padding: "0 16px", borderBottom: "1px solid var(--border)", background: "var(--bg-soft)" }}>
-        <a href="/" className="disp" style={{ fontWeight: 700, fontSize: 18, display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: "var(--text)" }}>
+      <div className="markets-header" style={{ height: 54, display: "flex", alignItems: "center", gap: 16, padding: "0 16px", borderBottom: "1px solid var(--border)", background: "var(--bg-soft)" }}>
+        <AppNav />
+        <div className="disp" style={{ fontWeight: 700, fontSize: 18, display: "flex", alignItems: "center", gap: 8, color: "var(--text)" }}>
           <span style={{ width: 10, height: 10, borderRadius: 3, background: "var(--green)", boxShadow: "0 0 12px rgba(45,212,167,.65)" }} />
           BerylTerminal
-        </a>
-        <div style={{ width: 220 }}>
+        </div>
+        <div className="markets-search" style={{ width: 220 }}>
           <SymbolSearch value={symbol} onChange={setSymbol} onSelect={openInTerminal} />
         </div>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>

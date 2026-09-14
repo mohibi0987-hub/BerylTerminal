@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { DEFAULT_CANDLE_COLORS, getCandleColors, setCandleColors, type CandleColors } from "@/lib/chart-appearance";
+import { AppNav } from "@/components/AppNav";
 
 const BROKER_LABELS: Record<string, string> = {
   ALPACA: "Alpaca",
@@ -105,6 +106,7 @@ export default function SettingsPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#0A0E17", color: "var(--text)" }}>
       <div style={{ height: 54, display: "flex", alignItems: "center", gap: 16, padding: "0 16px", borderBottom: "1px solid var(--border)", background: "var(--bg-soft)" }}>
+        <AppNav />
         <a href="/markets" className="disp" style={{ fontWeight: 700, fontSize: 18, display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: "var(--text)" }}>
           <span style={{ width: 10, height: 10, borderRadius: 3, background: "var(--green)", boxShadow: "0 0 12px rgba(45,212,167,.65)" }} />
           BerylTerminal
@@ -114,8 +116,8 @@ export default function SettingsPage() {
         <a href="/markets" style={{ marginLeft: "auto", fontSize: 12.5, color: "var(--muted)", textDecoration: "none" }}>← Back to Markets</a>
       </div>
 
-      <div style={{ display: "flex", maxWidth: 900, margin: "0 auto", minHeight: "calc(100vh - 54px)" }}>
-        <div style={{ width: 200, borderRight: "1px solid var(--border)", padding: "28px 12px" }}>
+      <div className="settings-row" style={{ display: "flex", maxWidth: 900, margin: "0 auto", minHeight: "calc(100vh - 54px)" }}>
+        <div className="settings-sidebar" style={{ borderRight: "1px solid var(--border)", padding: "28px 12px" }}>
           <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--faint)", padding: "0 10px", marginBottom: 8 }}>Settings</div>
           {[
             { key: "general" as const, label: "General" },
@@ -140,7 +142,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div style={{ flex: 1, padding: "28px 32px", maxWidth: 620 }}>
+        <div className="settings-content" style={{ flex: 1, padding: "28px 32px", maxWidth: 620 }}>
           {tab === "general" && (
             <div>
               <h1 className="disp" style={{ fontSize: 20, marginBottom: 6 }}>General</h1>

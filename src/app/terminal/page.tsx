@@ -7,6 +7,7 @@ import { OrderTicket } from "@/components/OrderTicket";
 import { BrokerConnectModal, type Broker } from "@/components/BrokerConnectModal";
 import { Watchlist } from "@/components/Watchlist";
 import { SymbolSearch } from "@/components/SymbolSearch";
+import { AppNav } from "@/components/AppNav";
 
 // Twelve Data's actual supported interval values for /time_series.
 const TIMEFRAMES = [
@@ -117,19 +118,20 @@ export default function Terminal() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <div style={{ height: 54, display: "flex", alignItems: "center", gap: 16, padding: "0 16px", borderBottom: "1px solid var(--border)", background: "var(--bg-soft)" }}>
-        <a href="/" className="disp" style={{ fontWeight: 700, fontSize: 18, display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: "var(--text)" }}>
+      <div className="term-header" style={{ height: 54, display: "flex", alignItems: "center", gap: 16, padding: "0 16px", borderBottom: "1px solid var(--border)", background: "var(--bg-soft)" }}>
+        <AppNav />
+        <div className="disp" style={{ fontWeight: 700, fontSize: 18, display: "flex", alignItems: "center", gap: 8, color: "var(--text)" }}>
           <span style={{ width: 10, height: 10, borderRadius: 3, background: "var(--green)", boxShadow: "0 0 12px rgba(45,212,167,.65)" }} />
           BerylTerminal
-        </a>
+        </div>
         <SymbolSearch value={symbol} onChange={setSymbol} onSelect={openSymbol} />
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
           {account ? (
-            <span className="mono" style={{ fontSize: 12, color: "var(--muted)" }}>
+            <span className="mono term-account-summary" style={{ fontSize: 12, color: "var(--muted)" }}>
               {broker} {mode === "PAPER" ? "Paper" : "Live"} · Equity ${account.equity.toLocaleString()} · Buying power ${account.buyingPower.toLocaleString()}
             </span>
           ) : (
-            <span style={{ fontSize: 12, color: "var(--faint)" }}>{accountError ? "No broker connected" : "Loading…"}</span>
+            <span className="term-account-summary" style={{ fontSize: 12, color: "var(--faint)" }}>{accountError ? "No broker connected" : "Loading…"}</span>
           )}
           <button onClick={() => setShowConnect(true)} style={{ padding: "7px 13px", borderRadius: 20, border: "1px solid var(--green-border)", background: "var(--green-dim)", color: "var(--green)", fontWeight: 700, fontSize: 12 }}>
             Connect broker
@@ -165,13 +167,13 @@ export default function Terminal() {
         ))}
       </div>
 
-      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+      <div className="term-main-row" style={{ flex: 1, display: "flex", minHeight: 0 }}>
         {/* Draw-toolbar rail — same left-side placement as the reference
             mockup and TradingView. Only Cursor and Horizontal Ray are real
             (native to the charting library); Trend/Fib/Rect/Text need a
             custom canvas overlay this library doesn't provide, so they're
             shown disabled rather than faked as working. */}
-        <div style={{ width: 42, flexShrink: 0, background: "var(--bg-soft)", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", alignItems: "center", padding: "10px 0", gap: 3 }}>
+        <div className="term-draw-rail" style={{ flexShrink: 0, background: "var(--bg-soft)", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", alignItems: "center", padding: "10px 0", gap: 3 }}>
           <button
             onClick={() => setDrawMode(false)}
             title="Cursor"
@@ -289,7 +291,7 @@ export default function Terminal() {
                     const pnl = hasPnl ? Number(p.marketValue) - costBasis : null;
                     const pnlPct = hasPnl ? (pnl! / costBasis) * 100 : null;
                     return (
-                      <div key={p.symbol} style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 10px", background: "var(--bg-soft)", borderRadius: 6, fontSize: 12.5 }}>
+                      <div key={p.symbol} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 14, padding: "8px 10px", background: "var(--bg-soft)", borderRadius: 6, fontSize: 12.5 }}>
                         <span style={{ fontWeight: 700, minWidth: 60 }}>{p.symbol}</span>
                         <span style={{ color: "var(--muted)" }}>{p.quantity} shares</span>
                         <span style={{ color: "var(--muted)" }}>Avg ${Number(p.avgPrice ?? 0).toFixed(2)}</span>
@@ -318,7 +320,7 @@ export default function Terminal() {
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {orders.map((o: any) => (
-                    <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 10px", background: "var(--bg-soft)", borderRadius: 6, fontSize: 12.5 }}>
+                    <div key={o.id} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 14, padding: "8px 10px", background: "var(--bg-soft)", borderRadius: 6, fontSize: 12.5 }}>
                       <span style={{ fontWeight: 700, minWidth: 60 }}>{o.instrument?.symbol}</span>
                       <span style={{ color: o.side === "BUY" ? "var(--green)" : "var(--red)", minWidth: 40 }}>{o.side}</span>
                       <span style={{ color: "var(--muted)" }}>{o.quantity} @ {o.type === "MARKET" ? "MKT" : `$${o.limitPrice}`}</span>
@@ -334,7 +336,7 @@ export default function Terminal() {
             )}
           </div>
         </div>
-        <div style={{ width: 300, borderLeft: "1px solid var(--border)", padding: 14, background: "var(--bg-soft)", display: "flex", flexDirection: "column", gap: 18, overflowY: "auto" }}>
+        <div className="term-sidebar" style={{ borderLeft: "1px solid var(--border)", padding: 14, background: "var(--bg-soft)", display: "flex", flexDirection: "column", gap: 18, overflowY: "auto" }}>
           <Watchlist onSelectSymbol={openSymbol} />
           <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
             <OrderTicket symbol={symbol} broker={broker} mode={mode} onOrderPlaced={handleOrderPlaced} />

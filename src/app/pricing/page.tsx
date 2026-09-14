@@ -136,7 +136,7 @@ export default function PricingPage() {
 
           {/* Tier tabs — clicking one re-themes the whole section background,
               same interaction TradingView uses on its own paywall. */}
-          <div style={{ display: "inline-flex", gap: 4, background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 12, padding: 4, marginBottom: 28 }}>
+          <div style={{ display: "inline-flex", flexWrap: "wrap", justifyContent: "center", gap: 4, background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 12, padding: 4, marginBottom: 28 }}>
             {TIERS.map((t) => (
               <button
                 key={t.id}
@@ -155,7 +155,7 @@ export default function PricingPage() {
 
           <div style={{ maxWidth: 640, margin: "0 auto" }}>
             <div style={{ background: "var(--panel)", border: `1px solid ${active.theme.accent}55`, borderRadius: 16, padding: 32, textAlign: "left" }}>
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 4 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
                 <div className="disp" style={{ fontSize: 22, fontWeight: 700 }}>
                   BerylTerminal <span style={{ color: active.theme.accent }}>{active.name}</span>
                 </div>

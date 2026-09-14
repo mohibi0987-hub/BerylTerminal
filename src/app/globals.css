@@ -86,3 +86,61 @@ a { color: inherit; }
 .legal h2 { font-size: 18px; margin: 34px 0 10px; }
 .legal p, .legal li { font-size: 14px; color: var(--muted); line-height: 1.7; }
 .legal ul { padding-left: 20px; }
+
+/* ---------- Mobile responsiveness ---------- */
+/* Zero media queries existed before this — everything below is new.
+   Approach: nothing is hidden outright (per explicit instruction), things
+   reflow, wrap, shrink, or scroll horizontally instead. */
+
+/* Structural class hooks for pages that use inline styles for layout —
+   these set the desktop-default width/behavior; the media query below
+   overrides them for narrow screens. Kept out of inline style so a real
+   CSS media query can actually reach them. */
+.term-draw-rail { width: 42px; }
+.term-sidebar { width: 300px; }
+.settings-sidebar { width: 200px; }
+
+@media (max-width: 900px) {
+  /* Terminal: sidebar (watchlist + order ticket) moves below the chart
+     instead of beside it; the draw-toolbar rail (trend/fib/etc., mostly
+     disabled placeholders anyway) is dropped to give the chart room —
+     its one working tool (horizontal price line) is still reachable from
+     the "+ Line" button in the chart's own bottom bar. */
+  .term-main-row { flex-direction: column; overflow-y: auto; }
+  .term-draw-rail { display: none; }
+  .term-sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); }
+
+  /* Account equity/buying-power text is the least essential thing in the
+     header on a narrow screen — everything else (symbol search, connect
+     broker, account menu) stays. */
+  .term-account-summary { display: none; }
+  .term-header { gap: 10px; padding: 0 10px; }
+
+  .markets-header { flex-wrap: wrap; height: auto; padding: 10px; gap: 10px; }
+  .markets-search { width: 160px; }
+
+  .settings-row { flex-direction: column; }
+  .settings-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); display: flex; gap: 4px; padding: 14px 12px; overflow-x: auto; }
+  .settings-sidebar button { white-space: nowrap; }
+  .settings-content { padding: 20px 16px; max-width: 100%; }
+}
+
+@media (max-width: 680px) {
+  .site-nav .container { flex-wrap: wrap; height: auto; padding: 10px 16px; gap: 8px; }
+  .site-nav nav { order: 3; width: 100%; justify-content: center; gap: 16px; font-size: 12.5px; }
+  .site-nav .spacer { gap: 6px; }
+  .site-nav .btn { padding: 8px 12px; font-size: 12px; }
+
+  .hero { padding: 56px 0 40px; }
+  .hero .cta-row .btn { padding: 11px 18px; font-size: 13px; }
+  .mock-body { flex-direction: column; height: auto; }
+  .mock-side { width: 100%; border-left: none; border-top: 1px solid var(--border); }
+  .mock-chart { height: 220px; }
+
+  .section { padding: 48px 0; }
+  .cta-band { padding: 48px 0; }
+  .legal { padding: 36px 0 60px; }
+
+  .site-footer .container { gap: 28px; }
+  .site-footer .bottom { flex-direction: column; align-items: flex-start; }
+}
