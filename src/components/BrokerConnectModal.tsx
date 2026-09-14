@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
 
-export type Broker = "ALPACA" | "WEBULL" | "IBKR" | "KRAKEN" | "COINBASE" | "TRADOVATE" | "BINANCE_US" | "GEMINI";
+export type Broker = "ALPACA" | "WEBULL" | "IBKR" | "KRAKEN" | "COINBASE" | "TRADOVATE" | "BINANCE_US" | "GEMINI" | "TASTYTRADE" | "TRADESTATION";
 
-const BROKERS: { id: Broker; name: string; color: string; glyph: string; status: string; statusColor: string; blurb: string; fields: { key: string; label: string; type?: string; textarea?: boolean }[] }[] = [
+const BROKERS: { id: Broker; name: string; color: string; glyph: string; status: string; statusColor: string; blurb: string; disabled?: boolean; fields: { key: string; label: string; type?: string; textarea?: boolean }[] }[] = [
   { id: "ALPACA", name: "Alpaca", color: "#2DD4A7", glyph: "A", status: "Paper ready", statusColor: "var(--green)", blurb: "Paper trading connects instantly and free. Live trading requires identity verification (1-3 business days).", fields: [{ key: "apiKeyId", label: "API Key ID" }, { key: "apiSecretKey", label: "API Secret Key", type: "password" }] },
   { id: "KRAKEN", name: "Kraken", color: "#5B4DFF", glyph: "K", status: "Key ready", statusColor: "var(--green)", blurb: "Generate an API key pair from Account → Security → API in your Kraken dashboard.", fields: [{ key: "apiKey", label: "API Key" }, { key: "apiSecret", label: "Private Key", type: "password" }] },
   { id: "COINBASE", name: "Coinbase Advanced", color: "#0052FF", glyph: "C", status: "Key ready", statusColor: "var(--green)", blurb: "Create a CDP API key at portal.cdp.coinbase.com. Ed25519 keys are recommended; ECDSA also works.", fields: [{ key: "apiKeyName", label: "API Key Name (organizations/.../apiKeys/...)" }, { key: "apiSecret", label: "Private Key", type: "password", textarea: true }] },
@@ -12,6 +12,8 @@ const BROKERS: { id: Broker; name: string; color: string; glyph: string; status:
   { id: "IBKR", name: "Interactive Brokers", color: "#B91C1C", glyph: "IB", status: "Needs gateway", statusColor: "var(--amber)", blurb: "Requires a running Client Portal Gateway logged into your funded/paper IBKR account.", fields: [{ key: "gatewayUrl", label: "Gateway URL" }, { key: "accountId", label: "Account ID" }] },
   { id: "BINANCE_US", name: "Binance.US", color: "#F0B90B", glyph: "B", status: "Key ready", statusColor: "var(--green)", blurb: "Generate an API key pair from API Management in your Binance.US account settings.", fields: [{ key: "apiKey", label: "API Key" }, { key: "apiSecret", label: "Secret Key", type: "password" }] },
   { id: "GEMINI", name: "Gemini", color: "#00DCFA", glyph: "G", status: "Key ready", statusColor: "var(--green)", blurb: "Generate an API key pair from Account → Settings → API in your Gemini dashboard.", fields: [{ key: "apiKey", label: "API Key" }, { key: "apiSecret", label: "API Secret", type: "password" }] },
+  { id: "TASTYTRADE", name: "Tastytrade", color: "#0AA95A", glyph: "TT", status: "Key ready", statusColor: "var(--green)", blurb: "Uses your regular Tastytrade login — no separate API key needed.", fields: [{ key: "username", label: "Username" }, { key: "password", label: "Password", type: "password" }] },
+  { id: "TRADESTATION", name: "TradeStation", color: "#00A0DC", glyph: "TS", status: "Needs OAuth setup", statusColor: "var(--amber)", disabled: true, blurb: "TradeStation only supports logging in through their own OAuth screen, not a pasted key or password — that flow isn't built into BerylTerminal yet.", fields: [] },
 ];
 
 export function BrokerConnectModal({ onClose, onConnected }: { onClose: () => void; onConnected: (broker: Broker, mode: "PAPER" | "LIVE") => void }) {
@@ -91,28 +93,36 @@ export function BrokerConnectModal({ onClose, onConnected }: { onClose: () => vo
                 <div style={{ fontSize: 11.5, color: "var(--muted)", lineHeight: 1.4 }}>{activeBroker.blurb}</div>
               </div>
 
-              <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                <button onClick={() => setMode("PAPER")} style={{ flex: 1, padding: 9, borderRadius: 6, border: "1px solid var(--border)", background: mode === "PAPER" ? "var(--green-dim)" : "transparent", color: mode === "PAPER" ? "var(--green)" : "var(--text)", fontWeight: 600, cursor: "pointer" }}>Paper</button>
-                <button onClick={() => setMode("LIVE")} style={{ flex: 1, padding: 9, borderRadius: 6, border: "1px solid var(--border)", background: mode === "LIVE" ? "var(--red-dim)" : "transparent", color: mode === "LIVE" ? "var(--red)" : "var(--text)", fontWeight: 600, cursor: "pointer" }}>Live (real money)</button>
-              </div>
+              {activeBroker.disabled ? (
+                <div style={{ padding: "16px 0 4px", textAlign: "center", color: "var(--faint)", fontSize: 12 }}>
+                  This connection type isn't available yet — see the note above for why.
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                    <button onClick={() => setMode("PAPER")} style={{ flex: 1, padding: 9, borderRadius: 6, border: "1px solid var(--border)", background: mode === "PAPER" ? "var(--green-dim)" : "transparent", color: mode === "PAPER" ? "var(--green)" : "var(--text)", fontWeight: 600, cursor: "pointer" }}>Paper</button>
+                    <button onClick={() => setMode("LIVE")} style={{ flex: 1, padding: 9, borderRadius: 6, border: "1px solid var(--border)", background: mode === "LIVE" ? "var(--red-dim)" : "transparent", color: mode === "LIVE" ? "var(--red)" : "var(--text)", fontWeight: 600, cursor: "pointer" }}>Live (real money)</button>
+                  </div>
 
-              {activeBroker.fields.map((f) => (
-                f.textarea ? (
-                  <textarea key={f.key} placeholder={f.label} rows={4} style={{ width: "100%", marginBottom: 8, fontFamily: "'IBM Plex Mono',monospace", fontSize: 11 }} onChange={(e) => setFields({ ...fields, [f.key]: e.target.value })} />
-                ) : (
-                  <input key={f.key} placeholder={f.label} type={f.type ?? "text"} style={{ width: "100%", marginBottom: 8 }} onChange={(e) => setFields({ ...fields, [f.key]: e.target.value })} />
-                )
-              ))}
+                  {activeBroker.fields.map((f) => (
+                    f.textarea ? (
+                      <textarea key={f.key} placeholder={f.label} rows={4} style={{ width: "100%", marginBottom: 8, fontFamily: "'IBM Plex Mono',monospace", fontSize: 11 }} onChange={(e) => setFields({ ...fields, [f.key]: e.target.value })} />
+                    ) : (
+                      <input key={f.key} placeholder={f.label} type={f.type ?? "text"} style={{ width: "100%", marginBottom: 8 }} onChange={(e) => setFields({ ...fields, [f.key]: e.target.value })} />
+                    )
+                  ))}
 
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "var(--muted)", margin: "10px 0 6px", cursor: "pointer" }}>
-                <input type="checkbox" checked={!remember} onChange={(e) => setRemember(!e.target.checked)} style={{ width: "auto" }} />
-                Don&apos;t remember me — forget these credentials when my session ends
-              </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "var(--muted)", margin: "10px 0 6px", cursor: "pointer" }}>
+                    <input type="checkbox" checked={!remember} onChange={(e) => setRemember(!e.target.checked)} style={{ width: "auto" }} />
+                    Don&apos;t remember me — forget these credentials when my session ends
+                  </label>
 
-              {error && <div style={{ color: "var(--red)", fontSize: 12, marginBottom: 8 }}>{error}</div>}
-              <button onClick={connect} disabled={busy} style={{ width: "100%", padding: 11, borderRadius: 6, border: "none", background: "var(--green)", color: "#04150F", fontWeight: 700, cursor: "pointer", marginTop: 4 }}>
-                {busy ? "Connecting…" : `Connect ${activeBroker.name}`}
-              </button>
+                  {error && <div style={{ color: "var(--red)", fontSize: 12, marginBottom: 8 }}>{error}</div>}
+                  <button onClick={connect} disabled={busy} style={{ width: "100%", padding: 11, borderRadius: 6, border: "none", background: "var(--green)", color: "#04150F", fontWeight: 700, cursor: "pointer", marginTop: 4 }}>
+                    {busy ? "Connecting…" : `Connect ${activeBroker.name}`}
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

@@ -11,6 +11,8 @@ const BROKER_LABELS: Record<string, string> = {
   IBKR: "Interactive Brokers",
   BINANCE_US: "Binance.US",
   GEMINI: "Gemini",
+  TASTYTRADE: "Tastytrade",
+  TRADESTATION: "TradeStation",
 };
 
 type Connection = {

@@ -19,6 +19,8 @@ enum BrokerName {
   TRADOVATE
   BINANCE_US
   GEMINI
+  TASTYTRADE
+  TRADESTATION
 }
 
 enum BrokerConnectionStatus {

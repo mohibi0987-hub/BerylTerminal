@@ -8,6 +8,8 @@ import { CoinbaseAdapter } from "./coinbase";
 import { TradovateAdapter } from "./tradovate";
 import { BinanceUsAdapter } from "./binanceus";
 import { GeminiAdapter } from "./gemini";
+import { TastytradeAdapter } from "./tastytrade";
+import { TradeStationAdapter } from "./tradestation";
 import { getEphemeralCredentials } from "../auth";
 import type { BrokerAdapter, BrokerName, ExecutionMode } from "./types";
 
@@ -21,6 +23,8 @@ function buildAdapter(broker: BrokerName, mode: ExecutionMode): BrokerAdapter {
     case "TRADOVATE": return new TradovateAdapter(mode);
     case "BINANCE_US": return new BinanceUsAdapter(mode);
     case "GEMINI": return new GeminiAdapter(mode);
+    case "TASTYTRADE": return new TastytradeAdapter(mode);
+    case "TRADESTATION": return new TradeStationAdapter(mode);
     default: throw new Error(`Unknown broker: ${broker}`);
   }
 }

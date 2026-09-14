@@ -4,7 +4,7 @@
 // same broker implement this identically — "live" is a config/credential change, not a
 // different code path.
 
-export type BrokerName = "ALPACA" | "WEBULL" | "IBKR" | "KRAKEN" | "COINBASE" | "TRADOVATE" | "BINANCE_US" | "GEMINI";
+export type BrokerName = "ALPACA" | "WEBULL" | "IBKR" | "KRAKEN" | "COINBASE" | "TRADOVATE" | "BINANCE_US" | "GEMINI" | "TASTYTRADE" | "TRADESTATION";
 export type ExecutionMode = "PAPER" | "LIVE";
 
 export interface BrokerCredentials {

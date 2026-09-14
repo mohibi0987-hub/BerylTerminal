@@ -11,6 +11,8 @@ import { CoinbaseAdapter } from "@/lib/brokers/coinbase";
 import { TradovateAdapter } from "@/lib/brokers/tradovate";
 import { BinanceUsAdapter } from "@/lib/brokers/binanceus";
 import { GeminiAdapter } from "@/lib/brokers/gemini";
+import { TastytradeAdapter } from "@/lib/brokers/tastytrade";
+import { TradeStationAdapter } from "@/lib/brokers/tradestation";
 
 // Required credential fields per broker — used only to build the adapter and to validate
 // the request body; the credentials themselves are stored as one generic encrypted blob,
@@ -24,6 +26,8 @@ const REQUIRED_FIELDS: Record<BrokerName, string[]> = {
   TRADOVATE: ["username", "password", "cid", "sec"],
   BINANCE_US: ["apiKey", "apiSecret"],
   GEMINI: ["apiKey", "apiSecret"],
+  TASTYTRADE: ["username", "password"],
+  TRADESTATION: [], // OAuth-only — see the comment in tradestation.ts; connect() will always fail cleanly for this broker until that flow exists
 };
 
 function buildAdapter(broker: BrokerName, mode: ExecutionMode) {
@@ -36,6 +40,8 @@ function buildAdapter(broker: BrokerName, mode: ExecutionMode) {
     case "TRADOVATE": return new TradovateAdapter(mode);
     case "BINANCE_US": return new BinanceUsAdapter(mode);
     case "GEMINI": return new GeminiAdapter(mode);
+    case "TASTYTRADE": return new TastytradeAdapter(mode);
+    case "TRADESTATION": return new TradeStationAdapter(mode);
   }
 }
 
