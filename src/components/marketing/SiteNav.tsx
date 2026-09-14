@@ -1,5 +1,4 @@
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
-import { clerkAppearance } from "@/lib/clerk-appearance";
+import { SiteAccountMenu } from "./SiteAccountMenu";
 
 export function SiteNav() {
   return (
@@ -15,18 +14,7 @@ export function SiteNav() {
           <a href="/pricing">Pricing</a>
         </nav>
         <div className="spacer">
-          <SignedIn>
-            <a href="/terminal" className="btn btn-ghost">Terminal</a>
-            <UserButton afterSignOutUrl="/" appearance={clerkAppearance}>
-              <UserButton.MenuItems>
-                <UserButton.Link label="General Settings" href="/settings" labelIcon={<span>⚙️</span>} />
-              </UserButton.MenuItems>
-            </UserButton>
-          </SignedIn>
-          <SignedOut>
-            <a href="/login" className="btn btn-ghost">Sign in</a>
-            <a href="/login" className="btn btn-primary">Launch Terminal</a>
-          </SignedOut>
+          <SiteAccountMenu />
         </div>
       </div>
     </header>
