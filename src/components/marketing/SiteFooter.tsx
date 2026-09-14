@@ -30,6 +30,8 @@ export function SiteFooter() {
           <h4>Legal</h4>
           <a href="/privacy">Privacy Policy</a>
           <a href="/terms">Terms of Service</a>
+          <a href="/support">Help &amp; Support</a>
+          <a href="/changelog">What's New</a>
         </div>
       </div>
       <div className="container bottom">

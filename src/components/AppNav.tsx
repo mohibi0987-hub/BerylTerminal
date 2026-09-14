@@ -10,6 +10,9 @@ const LINKS = [
   { href: "/terminal", label: "Terminal" },
   { href: "/settings", label: "Settings" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/refer", label: "Refer a friend" },
+  { href: "/support", label: "Help & Support" },
+  { href: "/changelog", label: "What's New" },
   { href: "/privacy", label: "Privacy Policy" },
   { href: "/terms", label: "Terms of Service" },
 ];

@@ -7,7 +7,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // never by a logged-in browser, so it can't require a Clerk session. It's
 // still safe: the webhook route verifies Stripe's signature itself before
 // trusting anything in the request body.
-const isPublicRoute = createRouteMatcher(["/", "/login(.*)", "/privacy", "/terms", "/pricing", "/api/webhooks/stripe"]);
+const isPublicRoute = createRouteMatcher(["/", "/login(.*)", "/privacy", "/terms", "/pricing", "/support", "/changelog", "/api/webhooks/stripe"]);
 
 // BerylTerminal and TradeBeryl share one Clerk application so a person is
 // signed in on both once they've signed in on either. TradeBeryl is the
