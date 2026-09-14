@@ -14,6 +14,23 @@ type Tier = {
 
 // Feature set per tier is additive — each includes everything in the one
 // before it, same convention as TradingView's own comparison table.
+// A TradingView-style numeric comparison table — same dimensions as their
+// own plan comparison (Charts per tab, Indicators per chart, Historical
+// bars), with "Parallel chart connections" adapted into something that
+// actually means something for a multi-broker terminal: how many broker
+// connections you can hold at once. Numbers for Pro/Elite/RedBeryl mirror
+// TradingView's own Essential/Premium/Ultimate tiers directly from their
+// pricing screens; Advanced's historical-bars figure matches their Plus
+// tier's real number too — the rest are reasonable interpolations for a
+// dimension TradingView didn't fully show at that tier.
+const COMPARISON = [
+  { label: "Charts per tab", free: "1", pro: "2", advanced: "4", elite: "8", redberyl: "16" },
+  { label: "Indicators per chart", free: "2", pro: "5", advanced: "10", elite: "25", redberyl: "50" },
+  { label: "Historical bars", free: "5K", pro: "10K", advanced: "10K", elite: "20K", redberyl: "40K" },
+  { label: "Connected brokers at once", free: "1", pro: "2", advanced: "4", elite: "7", redberyl: "7" },
+  { label: "Price alerts", free: "3", pro: "10", advanced: "50", elite: "250", redberyl: "1000" },
+];
+
 const TIERS: Tier[] = [
   {
     id: "pro",
@@ -185,6 +202,39 @@ export default function PricingPage() {
                   Checkout currently bills monthly regardless of this toggle — annual pricing isn't wired to a separate Stripe price yet.
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Numeric comparison table, same dimensions as TradingView's own
+              plan comparison. Note: these are the planned limits per plan —
+              actual usage gating (blocking a 6th indicator on Free, etc.)
+              isn't built into the app yet, only the billing/plan tracking is. */}
+          <div style={{ maxWidth: 760, margin: "40px auto 0", textAlign: "left", overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                  <th style={{ textAlign: "left", padding: "10px 12px", color: "var(--faint)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em" }}>Feature</th>
+                  <th style={{ padding: "10px 12px", color: "var(--faint)", fontSize: 11, textTransform: "uppercase" }}>Free</th>
+                  {TIERS.map((t) => (
+                    <th key={t.id} style={{ padding: "10px 12px", color: activeId === t.id ? t.theme.accent : "var(--muted)", fontWeight: 700 }}>{t.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARISON.map((row) => (
+                  <tr key={row.label} style={{ borderBottom: "1px solid var(--border-soft)" }}>
+                    <td style={{ padding: "10px 12px", color: "var(--muted)" }}>{row.label}</td>
+                    <td className="mono" style={{ padding: "10px 12px", textAlign: "center", color: "var(--faint)" }}>{row.free}</td>
+                    <td className="mono" style={{ padding: "10px 12px", textAlign: "center" }}>{row.pro}</td>
+                    <td className="mono" style={{ padding: "10px 12px", textAlign: "center" }}>{row.advanced}</td>
+                    <td className="mono" style={{ padding: "10px 12px", textAlign: "center" }}>{row.elite}</td>
+                    <td className="mono" style={{ padding: "10px 12px", textAlign: "center" }}>{row.redberyl}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 14, textAlign: "center" }}>
+              Billing and plan tracking are fully real (Stripe) — usage caps shown here aren't enforced in the app yet.
             </div>
           </div>
         </div>

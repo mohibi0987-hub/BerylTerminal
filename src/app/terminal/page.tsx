@@ -35,7 +35,9 @@ export default function Terminal() {
   const [symbol, setSymbol] = useState("AAPL");
   const [openSymbols, setOpenSymbols] = useState<string[]>(["AAPL"]);
   const [timeframe, setTimeframe] = useState("1min");
-  const [showVolume, setShowVolume] = useState(true);
+  const [lowerPane, setLowerPane] = useState<"volume" | "rsi" | "macd" | "none">("volume");
+  const [chartType, setChartType] = useState<"candle" | "line">("candle");
+  const [drawMode, setDrawMode] = useState(false);
   const [showSma20, setShowSma20] = useState(false);
   const [showSma50, setShowSma50] = useState(false);
   const [showConnect, setShowConnect] = useState(false);
@@ -153,8 +155,41 @@ export default function Terminal() {
       </div>
 
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+        {/* Draw-toolbar rail — same left-side placement as the reference
+            mockup and TradingView. Only Cursor and Horizontal Ray are real
+            (native to the charting library); Trend/Fib/Rect/Text need a
+            custom canvas overlay this library doesn't provide, so they're
+            shown disabled rather than faked as working. */}
+        <div style={{ width: 42, flexShrink: 0, background: "var(--bg-soft)", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", alignItems: "center", padding: "10px 0", gap: 3 }}>
+          <button
+            onClick={() => setDrawMode(false)}
+            title="Cursor"
+            style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid transparent", background: !drawMode ? "var(--green-dim)" : "transparent", color: !drawMode ? "var(--green)" : "var(--muted)", cursor: "pointer", fontSize: 14 }}
+          >
+            ↖
+          </button>
+          <div style={{ width: 20, height: 1, background: "var(--border)", margin: "4px 0" }} />
+          <button
+            onClick={() => setDrawMode(true)}
+            title="Horizontal ray — click the chart to place"
+            style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid transparent", background: drawMode ? "var(--green-dim)" : "transparent", color: drawMode ? "var(--green)" : "var(--muted)", cursor: "pointer", fontSize: 14 }}
+          >
+            —
+          </button>
+          {[
+            { icon: "╱", title: "Trend line — not available yet" },
+            { icon: "𝄒", title: "Fib retracement — not available yet" },
+            { icon: "▭", title: "Rectangle — not available yet" },
+            { icon: "T", title: "Text note — not available yet" },
+          ].map((tool) => (
+            <button key={tool.icon} disabled title={tool.title} style={{ width: 30, height: 30, borderRadius: 6, border: "none", background: "transparent", color: "var(--faint)", cursor: "not-allowed", fontSize: 13, opacity: 0.5 }}>
+              {tool.icon}
+            </button>
+          ))}
+        </div>
+
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <div style={{ height: 34, display: "flex", alignItems: "center", gap: 2, padding: "0 10px", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ height: 34, display: "flex", alignItems: "center", gap: 2, padding: "0 10px", borderBottom: "1px solid var(--border)", overflowX: "auto" }}>
             {TIMEFRAMES.map((tf) => (
               <button
                 key={tf.value}
@@ -169,8 +204,34 @@ export default function Terminal() {
               </button>
             ))}
             <span style={{ width: 1, height: 16, background: "var(--border)", margin: "0 8px" }} />
+            <div style={{ display: "flex", gap: 3, background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 6, padding: 2 }}>
+              {(["candle", "line"] as const).map((ct) => (
+                <button
+                  key={ct}
+                  onClick={() => setChartType(ct)}
+                  style={{ padding: "3px 8px", borderRadius: 4, border: "none", fontSize: 10.5, fontWeight: 700, cursor: "pointer", background: chartType === ct ? "var(--panel2)" : "transparent", color: chartType === ct ? "var(--text)" : "var(--muted)" }}
+                >
+                  {ct === "candle" ? "Candle" : "Line"}
+                </button>
+              ))}
+            </div>
+            <span style={{ width: 1, height: 16, background: "var(--border)", margin: "0 8px" }} />
             {[
-              { key: "vol", label: "Vol", active: showVolume, toggle: () => setShowVolume((v) => !v) },
+              { key: "volume" as const, label: "Vol" },
+              { key: "rsi" as const, label: "RSI" },
+              { key: "macd" as const, label: "MACD" },
+              { key: "none" as const, label: "None" },
+            ].map((p) => (
+              <button
+                key={p.key}
+                onClick={() => setLowerPane(p.key)}
+                style={{ padding: "4px 9px", borderRadius: 5, border: "1px solid var(--border)", fontSize: 11.5, fontWeight: 700, cursor: "pointer", background: lowerPane === p.key ? "var(--panel2)" : "transparent", color: lowerPane === p.key ? "var(--text)" : "var(--faint)" }}
+              >
+                {p.label}
+              </button>
+            ))}
+            <span style={{ width: 1, height: 16, background: "var(--border)", margin: "0 8px" }} />
+            {[
               { key: "sma20", label: "SMA 20", active: showSma20, toggle: () => setShowSma20((v) => !v) },
               { key: "sma50", label: "SMA 50", active: showSma50, toggle: () => setShowSma50((v) => !v) },
             ].map((ind) => (
@@ -188,7 +249,7 @@ export default function Terminal() {
             ))}
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
-            <Chart symbol={symbol} interval={timeframe} showVolume={showVolume} showSma20={showSma20} showSma50={showSma50} />
+            <Chart symbol={symbol} interval={timeframe} chartType={chartType} lowerPane={lowerPane} showSma20={showSma20} showSma50={showSma50} drawMode={drawMode} onDrawModeChange={setDrawMode} />
           </div>
           <div style={{ borderTop: "1px solid var(--border)", padding: 14, maxHeight: 220, overflowY: "auto" }}>
             <div style={{ display: "flex", gap: 14, marginBottom: 10 }}>
