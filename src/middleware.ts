@@ -2,7 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // Public: marketing homepage, legal pages, and the sign-in page itself.
 // Everything else (the terminal + all /api routes) requires a session.
-const isPublicRoute = createRouteMatcher(["/", "/login(.*)", "/privacy", "/terms"]);
+const isPublicRoute = createRouteMatcher(["/", "/login(.*)", "/privacy", "/terms", "/pricing"]);
 
 // BerylTerminal and TradeBeryl share one Clerk application so a person is
 // signed in on both once they've signed in on either. TradeBeryl is the

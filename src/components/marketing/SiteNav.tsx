@@ -12,7 +12,7 @@ export function SiteNav() {
         <nav>
           <a href="/#brokers">Brokers</a>
           <a href="/#features">Features</a>
-          <a href="/#pricing">Pricing</a>
+          <a href="/pricing">Pricing</a>
         </nav>
         <div className="spacer">
           <SignedIn>

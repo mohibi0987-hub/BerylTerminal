@@ -94,6 +94,9 @@ export default function HomePage() {
         <div className="container">
           <h2>Start on paper. Go live when you're ready.</h2>
           <p className="sub">Paper trading is free on every supported broker. Connect a live account whenever you want to trade for real.</p>
+          <div style={{ textAlign: "center" }}>
+            <a href="/pricing" className="btn btn-ghost">See full plans &amp; pricing →</a>
+          </div>
         </div>
       </section>
 

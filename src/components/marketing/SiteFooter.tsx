@@ -17,7 +17,7 @@ export function SiteFooter() {
           <h4>Product</h4>
           <a href="/#features">Features</a>
           <a href="/#brokers">Supported brokers</a>
-          <a href="/#pricing">Pricing</a>
+          <a href="/pricing">Pricing</a>
           <a href="/login">Launch terminal</a>
         </div>
         <div className="col">

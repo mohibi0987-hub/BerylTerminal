@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { createChart, ColorType, type UTCTimestamp, type ISeriesApi, type IChartApi, type IPriceLine } from "lightweight-charts";
+import { getCandleColors } from "@/lib/chart-appearance";
 
 type Bar = { timestamp: string; open: number; high: number; low: number; close: number; volume: number };
 
@@ -99,9 +100,10 @@ export function Chart({
       rightPriceScale: { borderColor: "#1E2733" },
     });
     chartRef.current = chart;
+    const { up, down } = getCandleColors();
     const series = chart.addCandlestickSeries({
-      upColor: "#2DD4A7", downColor: "#FF5C7A", borderVisible: false,
-      wickUpColor: "#2DD4A7", wickDownColor: "#FF5C7A",
+      upColor: up, downColor: down, borderVisible: false,
+      wickUpColor: up, wickDownColor: down,
     });
     seriesRef.current = series;
     priceLinesRef.current = [];
@@ -165,7 +167,7 @@ export function Chart({
           volumeSeries.setData(typedBars.map((b) => ({
             time: Math.floor(new Date(b.timestamp).getTime() / 1000) as UTCTimestamp,
             value: b.volume,
-            color: b.close >= b.open ? "rgba(45,212,167,.5)" : "rgba(255,92,122,.5)",
+            color: b.close >= b.open ? `${up}80` : `${down}80`, // 80 = ~50% opacity hex suffix
           })));
         }
         if (sma20Series) sma20Series.setData(sma(typedBars, 20));

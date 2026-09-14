@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { DEFAULT_CANDLE_COLORS, getCandleColors, setCandleColors, type CandleColors } from "@/lib/chart-appearance";
 
 const BROKER_LABELS: Record<string, string> = {
   ALPACA: "Alpaca",
@@ -24,10 +25,21 @@ type Connection = {
 };
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<"general" | "brokers">("general");
+  const [tab, setTab] = useState<"general" | "appearance" | "brokers">("general");
   const [connections, setConnections] = useState<Connection[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [colors, setColors] = useState<CandleColors>(DEFAULT_CANDLE_COLORS);
+
+  useEffect(() => {
+    setColors(getCandleColors());
+  }, []);
+
+  function updateColor(key: keyof CandleColors, value: string) {
+    const next = { ...colors, [key]: value };
+    setColors(next);
+    setCandleColors(next);
+  }
 
   useEffect(() => {
     if (tab !== "brokers") return;
@@ -74,6 +86,7 @@ export default function SettingsPage() {
           <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--faint)", padding: "0 10px", marginBottom: 8 }}>Settings</div>
           {[
             { key: "general" as const, label: "General" },
+            { key: "appearance" as const, label: "Appearance" },
             { key: "brokers" as const, label: "Connected Brokers" },
           ].map((t) => (
             <button
@@ -103,6 +116,42 @@ export default function SettingsPage() {
               <div style={{ border: "1px dashed var(--border)", borderRadius: 10, padding: 20, fontSize: 13, color: "var(--faint)", lineHeight: 1.6 }}>
                 Nothing configured here yet.
               </div>
+            </div>
+          )}
+
+          {tab === "appearance" && (
+            <div>
+              <h1 className="disp" style={{ fontSize: 20, marginBottom: 6 }}>Appearance</h1>
+              <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 20 }}>
+                Changes apply immediately to the chart in the terminal — stored on this device only.
+              </p>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+                <span style={{ fontSize: 13 }}>Theme</span>
+                <div style={{ display: "flex", gap: 4, background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 8, padding: 3 }}>
+                  <span style={{ padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, background: "var(--panel2)", color: "var(--text)" }}>Dark</span>
+                  <span title="Light theme isn't built yet" style={{ padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, color: "var(--faint)", cursor: "not-allowed" }}>Light</span>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+                <span style={{ fontSize: 13 }}>Up candle color</span>
+                <input type="color" value={colors.up} onChange={(e) => updateColor("up", e.target.value)} style={{ width: 44, height: 30, padding: 2, border: "1px solid var(--border)", borderRadius: 6, background: "var(--panel2)" }} />
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+                <span style={{ fontSize: 13 }}>Down candle color</span>
+                <input type="color" value={colors.down} onChange={(e) => updateColor("down", e.target.value)} style={{ width: 44, height: 30, padding: 2, border: "1px solid var(--border)", borderRadius: 6, background: "var(--panel2)" }} />
+              </div>
+
+              {(colors.up !== DEFAULT_CANDLE_COLORS.up || colors.down !== DEFAULT_CANDLE_COLORS.down) && (
+                <button
+                  onClick={() => { setColors(DEFAULT_CANDLE_COLORS); setCandleColors(DEFAULT_CANDLE_COLORS); }}
+                  style={{ marginTop: 14, padding: "7px 14px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", fontSize: 12, cursor: "pointer" }}
+                >
+                  Reset to defaults
+                </button>
+              )}
             </div>
           )}
 
