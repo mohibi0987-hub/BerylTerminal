@@ -1,18 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { stripe, PLAN_PRICE_IDS } from "@/lib/stripe";
+import { stripe, PLAN_PRICE_IDS, BUNDLE_PRICE_ID, type PlanTier } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const plan = body.plan as keyof typeof PLAN_PRICE_IDS;
-  const priceId = PLAN_PRICE_IDS[plan];
+  const isBundle = body.plan === "BUNDLE";
+  const interval: "monthly" | "annual" = body.interval === "annual" ? "annual" : "monthly";
+
+  let priceId: string | undefined;
+  let missingVarName: string;
+  if (isBundle) {
+    priceId = BUNDLE_PRICE_ID;
+    missingVarName = "STRIPE_PRICE_BUNDLE";
+  } else {
+    const plan = body.plan as PlanTier;
+    priceId = PLAN_PRICE_IDS[plan]?.[interval];
+    missingVarName = `STRIPE_PRICE_${plan}${interval === "annual" ? "_ANNUAL" : ""}`;
+  }
+
   if (!priceId) {
     return NextResponse.json(
-      { error: `Stripe isn't configured for the ${plan ?? "requested"} plan yet — add STRIPE_PRICE_${plan} in Vercel's environment variables.` },
+      { error: `Stripe isn't configured for this plan yet — add ${missingVarName} in Vercel's environment variables.` },
       { status: 501 },
     );
   }
@@ -27,7 +39,10 @@ export async function POST(req: NextRequest) {
 
   try {
     // Reuse an existing Stripe customer if this user already has one (e.g. from a
-    // previous, since-canceled subscription) instead of creating a duplicate.
+    // previous, since-canceled subscription) instead of creating a duplicate. This
+    // matters even more for the bundle, since it's meant to be the SAME customer
+    // record TradeBeryl already bills — sharing one Stripe account is what makes a
+    // bundle spanning both products possible in the first place.
     let customerId = user.stripeCustomerId ?? undefined;
     if (!customerId) {
       const customer = await stripe.customers.create({ email: user.email, metadata: { userId: user.id } });
@@ -41,7 +56,7 @@ export async function POST(req: NextRequest) {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${origin}/settings?checkout=success`,
       cancel_url: `${origin}/pricing?checkout=cancelled`,
-      metadata: { userId: user.id, plan },
+      metadata: { userId: user.id, plan: body.plan, interval },
     });
 
     return NextResponse.json({ url: session.url });

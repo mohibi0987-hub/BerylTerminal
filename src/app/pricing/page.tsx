@@ -92,14 +92,14 @@ export default function PricingPage() {
   const [error, setError] = useState<string | null>(null);
   const active = TIERS.find((t) => t.id === activeId)!;
 
-  async function upgrade() {
+  async function upgrade(planOverride?: string) {
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: active.id.toUpperCase() }),
+        body: JSON.stringify({ plan: planOverride ?? active.id.toUpperCase(), interval: billing }),
       });
       let data: any = null;
       try { data = await res.json(); } catch { /* non-JSON error body */ }
@@ -187,7 +187,7 @@ export default function PricingPage() {
               </div>
 
               <button
-                onClick={upgrade}
+                onClick={() => upgrade()}
                 disabled={busy}
                 style={{
                   width: "100%", padding: 14, borderRadius: 8, border: "none", fontWeight: 700, fontSize: 14, cursor: "pointer",
@@ -197,11 +197,6 @@ export default function PricingPage() {
                 {busy ? "Starting checkout…" : `Upgrade to ${active.name}`}
               </button>
               {error && <div style={{ fontSize: 12, color: "var(--red)", textAlign: "center", marginTop: 10 }}>{error}</div>}
-              {billing === "annual" && (
-                <div style={{ fontSize: 11, color: "var(--faint)", textAlign: "center", marginTop: 12 }}>
-                  Checkout currently bills monthly regardless of this toggle — annual pricing isn't wired to a separate Stripe price yet.
-                </div>
-              )}
             </div>
           </div>
 
@@ -235,6 +230,22 @@ export default function PricingPage() {
             </table>
             <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 14, textAlign: "center" }}>
               Billing and plan tracking are fully real (Stripe) — usage caps shown here aren't enforced in the app yet.
+            </div>
+          </div>
+
+          {/* Same bundle concept as the reference mockup — one subscription,
+              one Stripe customer shared with TradeBeryl, at a flat discounted
+              price rather than the two plans added separately. */}
+          <div style={{ maxWidth: 760, margin: "24px auto 0", background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 12, padding: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", textAlign: "left" }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>Bundle with TradeBeryl Journal Premium</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>Terminal Pro + Journal Premium together — trade here, auto-review there.</div>
+            </div>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div><span className="mono" style={{ fontSize: 20, fontWeight: 700 }}>$20</span><span style={{ fontSize: 12, color: "var(--muted)" }}>/mo</span></div>
+              <button onClick={() => upgrade("BUNDLE")} disabled={busy} className="btn btn-primary" style={{ marginTop: 8, padding: "8px 16px" }}>
+                {busy ? "Starting…" : "Bundle & save"}
+              </button>
             </div>
           </div>
         </div>
