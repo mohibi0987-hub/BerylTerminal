@@ -127,6 +127,18 @@ export class AlpacaAdapter implements BrokerAdapter {
     if (req.limitPrice != null) body.limit_price = req.limitPrice;
     if (req.stopPrice != null) body.stop_price = req.stopPrice;
 
+    // Alpaca's real bracket-order shape: order_class "bracket" plus both a
+    // take_profit and stop_loss leg. Only wired up for the case where BOTH
+    // are provided — Alpaca also supports one-sided OCO/OTO order classes,
+    // but those have different validation rules this adapter doesn't
+    // implement; better to support the one real case correctly than half-
+    // implement all three.
+    if (req.takeProfitPrice != null && req.stopLossPrice != null) {
+      body.order_class = "bracket";
+      body.take_profit = { limit_price: req.takeProfitPrice };
+      body.stop_loss = { stop_price: req.stopLossPrice };
+    }
+
     try {
       const o = await this.request("/v2/orders", { method: "POST", body: JSON.stringify(body) });
       return { externalOrderId: o.id, status: "ACCEPTED" };

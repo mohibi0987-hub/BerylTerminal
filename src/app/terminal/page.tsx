@@ -49,6 +49,15 @@ export default function Terminal() {
   const [accountError, setAccountError] = useState<string | null>(null);
   const [bottomTab, setBottomTab] = useState<"positions" | "orders">("positions");
   const [orders, setOrders] = useState<any[] | null>(null);
+  const [plan, setPlan] = useState<string>("FREE");
+
+  useEffect(() => {
+    fetch("/api/billing")
+      .then((res) => res.json())
+      .then((data) => { if (data?.plan) setPlan(data.plan); })
+      .catch(() => {}); // billing check is a soft gate, not critical path — default to FREE (most restrictive) on failure
+  }, []);
+  const isPaid = plan !== "FREE";
 
   // Opens with whatever symbol the Markets page (or any other link) passed
   // via ?symbol= — read from window.location directly rather than
@@ -230,17 +239,18 @@ export default function Terminal() {
             </div>
             <span style={{ width: 1, height: 16, background: "var(--border)", margin: "0 8px" }} />
             {[
-              { key: "volume" as const, label: "Vol" },
-              { key: "rsi" as const, label: "RSI" },
-              { key: "macd" as const, label: "MACD" },
-              { key: "none" as const, label: "None" },
+              { key: "volume" as const, label: "Vol", locked: false },
+              { key: "rsi" as const, label: "RSI", locked: !isPaid },
+              { key: "macd" as const, label: "MACD", locked: !isPaid },
+              { key: "none" as const, label: "None", locked: false },
             ].map((p) => (
               <button
                 key={p.key}
-                onClick={() => setLowerPane(p.key)}
-                style={{ padding: "4px 9px", borderRadius: 5, border: "1px solid var(--border)", fontSize: 11.5, fontWeight: 700, cursor: "pointer", background: lowerPane === p.key ? "var(--panel2)" : "transparent", color: lowerPane === p.key ? "var(--text)" : "var(--faint)" }}
+                onClick={() => (p.locked ? window.location.assign("/pricing") : setLowerPane(p.key))}
+                title={p.locked ? "Upgrade to Pro to use this indicator" : undefined}
+                style={{ padding: "4px 9px", borderRadius: 5, border: "1px solid var(--border)", fontSize: 11.5, fontWeight: 700, cursor: "pointer", background: lowerPane === p.key ? "var(--panel2)" : "transparent", color: lowerPane === p.key ? "var(--text)" : p.locked ? "var(--faint)" : "var(--faint)" }}
               >
-                {p.label}
+                {p.locked ? "🔒 " : ""}{p.label}
               </button>
             ))}
             <span style={{ width: 1, height: 16, background: "var(--border)", margin: "0 8px" }} />
@@ -250,14 +260,15 @@ export default function Terminal() {
             ].map((ind) => (
               <button
                 key={ind.key}
-                onClick={ind.toggle}
+                onClick={() => (isPaid ? ind.toggle() : window.location.assign("/pricing"))}
+                title={isPaid ? undefined : "Upgrade to Pro to use this indicator"}
                 style={{
                   padding: "4px 9px", borderRadius: 5, border: "1px solid var(--border)", fontSize: 11.5, fontWeight: 700, cursor: "pointer",
                   background: ind.active ? "var(--panel2)" : "transparent",
                   color: ind.active ? "var(--text)" : "var(--faint)",
                 }}
               >
-                {ind.label}
+                {isPaid ? "" : "🔒 "}{ind.label}
               </button>
             ))}
           </div>

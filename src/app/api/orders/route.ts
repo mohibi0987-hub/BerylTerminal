@@ -54,6 +54,8 @@ export async function POST(req: NextRequest) {
     quantity: body.quantity,
     limitPrice: body.limitPrice,
     stopPrice: body.stopPrice,
+    takeProfitPrice: body.takeProfitPrice,
+    stopLossPrice: body.stopLossPrice,
   };
 
   const result = await submitOrder(db, adapter, marketData, {

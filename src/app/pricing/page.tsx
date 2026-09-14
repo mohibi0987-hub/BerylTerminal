@@ -92,23 +92,36 @@ export default function PricingPage() {
   const [error, setError] = useState<string | null>(null);
   const active = TIERS.find((t) => t.id === activeId)!;
 
-  async function upgrade(planOverride?: string) {
+  async function upgrade(planOverride?: string, confirmAttach?: boolean) {
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: planOverride ?? active.id.toUpperCase(), interval: billing }),
+        body: JSON.stringify({ plan: planOverride ?? active.id.toUpperCase(), interval: billing, confirmAttach }),
       });
       let data: any = null;
       try { data = await res.json(); } catch { /* non-JSON error body */ }
-      if (!res.ok || !data?.url) {
+      if (!res.ok) {
         if (res.status === 401) { window.location.href = "/login"; return; }
         setError(data?.error ?? `Couldn't start checkout (${res.status}).`);
         return;
       }
-      window.location.href = data.url; // real Stripe Checkout
+      if (data?.requiresConfirmation) {
+        // Attaching to an existing subscription bills immediately (prorated)
+        // with no Stripe-hosted confirmation screen — get an explicit yes
+        // before actually making the change.
+        if (window.confirm(data.message)) await upgrade(planOverride, true);
+        return;
+      }
+      if (data?.attached) {
+        setError(null);
+        window.location.href = "/settings?checkout=success";
+        return;
+      }
+      if (data?.url) { window.location.href = data.url; return; } // real Stripe Checkout
+      setError("Unexpected response from the server.");
     } catch {
       setError("Couldn't reach the server. Check your connection and try again.");
     } finally {

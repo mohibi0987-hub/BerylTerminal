@@ -42,6 +42,13 @@ export interface PlaceOrderRequest {
   quantity: number;
   limitPrice?: number;
   stopPrice?: number;
+  // Bracket order legs — currently only honored by the Alpaca adapter,
+  // which supports them natively via order_class: "bracket". Every other
+  // adapter in this file ignores these fields entirely rather than
+  // silently failing; the order ticket UI only exposes them when Alpaca
+  // is the selected broker, so this isn't reachable for the others anyway.
+  takeProfitPrice?: number;
+  stopLossPrice?: number;
 }
 
 export interface BrokerOrderResult {

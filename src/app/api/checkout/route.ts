@@ -48,6 +48,35 @@ export async function POST(req: NextRequest) {
       const customer = await stripe.customers.create({ email: user.email, metadata: { userId: user.id } });
       customerId = customer.id;
       await db.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } });
+    } else if (isBundle) {
+      // If this customer already has an active subscription (their existing
+      // TradeBeryl plan), the bundle should attach to it as a new line item
+      // rather than start a second, separate subscription — that's the whole
+      // point of a "bundle": one subscription, both products. Only do this
+      // if the bundle price isn't already on that subscription.
+      const existing = await stripe.subscriptions.list({ customer: customerId, status: "active", limit: 1 });
+      const subscription = existing.data[0];
+      if (subscription) {
+        const alreadyBundled = subscription.items.data.some((item) => item.price.id === priceId);
+        if (alreadyBundled) {
+          return NextResponse.json({ attached: true, message: "The bundle is already on your subscription." });
+        }
+        // Attaching directly bypasses Stripe's own hosted checkout confirmation
+        // screen and bills immediately (prorated) — unlike a normal Checkout
+        // redirect, there's no natural "are you sure" step here, so require
+        // one explicitly before actually making the change.
+        if (!body.confirmAttach) {
+          const price = await stripe.prices.retrieve(priceId!);
+          const amount = price.unit_amount ? (price.unit_amount / 100).toFixed(2) : "the bundle price";
+          return NextResponse.json({
+            requiresConfirmation: true,
+            message: `This adds the TradeBeryl + BerylTerminal bundle ($${amount}/mo) to your existing subscription and bills a prorated amount today. Continue?`,
+          });
+        }
+        await stripe.subscriptionItems.create({ subscription: subscription.id, price: priceId! });
+        return NextResponse.json({ attached: true, message: "Bundle added to your existing subscription." });
+      }
+      // No existing subscription — fall through to a normal new Checkout Session below.
     }
 
     const session = await stripe.checkout.sessions.create({

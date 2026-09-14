@@ -10,6 +10,8 @@ export function OrderTicket({ symbol, broker, mode, onOrderPlaced }: { symbol: s
   const [qty, setQty] = useState(10);
   const [type, setType] = useState<"MARKET" | "LIMIT">("MARKET");
   const [limitPrice, setLimitPrice] = useState<number | "">("");
+  const [takeProfitPrice, setTakeProfitPrice] = useState<number | "">("");
+  const [stopLossPrice, setStopLossPrice] = useState<number | "">("");
   const [result, setResult] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -57,6 +59,8 @@ export function OrderTicket({ symbol, broker, mode, onOrderPlaced }: { symbol: s
           broker, mode, symbol, side, type, quantity: submittedQty,
           timeInForce: "DAY",
           limitPrice: type === "LIMIT" ? Number(limitPrice) : undefined,
+          takeProfitPrice: broker === "ALPACA" && takeProfitPrice !== "" && stopLossPrice !== "" ? Number(takeProfitPrice) : undefined,
+          stopLossPrice: broker === "ALPACA" && takeProfitPrice !== "" && stopLossPrice !== "" ? Number(stopLossPrice) : undefined,
         }),
       });
       let json: any = null;
@@ -140,6 +144,22 @@ export function OrderTicket({ symbol, broker, mode, onOrderPlaced }: { symbol: s
         <div style={{ marginBottom: 8 }}>
           <label style={{ fontSize: 11, color: "var(--muted)" }}>Limit price</label>
           <input type="number" step="0.01" value={limitPrice} onChange={(e) => setLimitPrice(e.target.value === "" ? "" : Number(e.target.value))} style={{ width: "100%" }} />
+        </div>
+      )}
+      {broker === "ALPACA" ? (
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <label style={{ fontSize: 11, color: "var(--muted)" }}>Take profit / Stop loss (optional)</label>
+            <span title="Alpaca-native bracket order — both must be set together, or leave both blank" style={{ fontSize: 10, color: "var(--faint)", cursor: "help" }}>ⓘ</span>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <input type="number" step="0.01" placeholder="Take profit" value={takeProfitPrice} onChange={(e) => setTakeProfitPrice(e.target.value === "" ? "" : Number(e.target.value))} style={{ flex: 1 }} />
+            <input type="number" step="0.01" placeholder="Stop loss" value={stopLossPrice} onChange={(e) => setStopLossPrice(e.target.value === "" ? "" : Number(e.target.value))} style={{ flex: 1 }} />
+          </div>
+        </div>
+      ) : (
+        <div style={{ fontSize: 10.5, color: "var(--faint)", marginBottom: 8 }}>
+          Take profit / stop loss (bracket orders) are only available on Alpaca right now.
         </div>
       )}
       <button onClick={() => submit()} disabled={busy} style={{ width: "100%", padding: 11, borderRadius: 6, border: "none", fontWeight: 700, background: side === "BUY" ? "var(--green)" : "var(--red)", color: side === "BUY" ? "#04150F" : "#2A0410" }}>
