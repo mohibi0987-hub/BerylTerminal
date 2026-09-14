@@ -36,6 +36,25 @@ export default function SettingsPage() {
   const [billingInfo, setBillingInfo] = useState<{ plan: string; subscriptionStatus: string | null; hasBillingAccount: boolean } | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [portalBusy, setPortalBusy] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function deleteAccount() {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch("/api/account/delete", { method: "POST" });
+      let data: any = null;
+      try { data = await res.json(); } catch { /* non-JSON error body */ }
+      if (!res.ok) { setDeleteError(data?.error ?? `Couldn't delete your account (${res.status}).`); return; }
+      window.location.href = "/"; // signed out server-side already (identity deleted); land on the public homepage
+    } catch {
+      setDeleteError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     setColors(getCandleColors());
@@ -147,10 +166,38 @@ export default function SettingsPage() {
             <div>
               <h1 className="disp" style={{ fontSize: 20, marginBottom: 6 }}>General</h1>
               <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 20 }}>
-                This section is being carried over from earlier BerylTerminal builds — it isn't fully populated yet.
+                Profile, email, and password are managed from the account menu (avatar → Manage account).
               </p>
-              <div style={{ border: "1px dashed var(--border)", borderRadius: 10, padding: 20, fontSize: 13, color: "var(--faint)", lineHeight: 1.6 }}>
-                Nothing configured here yet.
+
+              <div style={{ border: "1px solid var(--red)", borderRadius: 10, padding: 20, marginTop: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "var(--red)", marginBottom: 6 }}>Danger zone</div>
+                <p style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.6, marginBottom: 14 }}>
+                  Permanently deletes your account: all broker connections, watchlists, orders, and alerts. If you
+                  have an active subscription, it's cancelled first so you stop being billed. This can't be undone.
+                </p>
+                <label style={{ fontSize: 11.5, color: "var(--muted)", display: "block", marginBottom: 6 }}>
+                  Type <span className="mono" style={{ color: "var(--text)" }}>DELETE</span> to confirm
+                </label>
+                <input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  style={{ width: "100%", marginBottom: 10 }}
+                />
+                {deleteError && <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 10 }}>{deleteError}</div>}
+                <button
+                  onClick={deleteAccount}
+                  disabled={deleteConfirmText !== "DELETE" || deleting}
+                  style={{
+                    padding: "9px 16px", borderRadius: 6, border: "1px solid var(--red)", fontWeight: 700, fontSize: 13,
+                    cursor: deleteConfirmText === "DELETE" ? "pointer" : "not-allowed",
+                    background: deleteConfirmText === "DELETE" ? "var(--red)" : "transparent",
+                    color: deleteConfirmText === "DELETE" ? "#2A0410" : "var(--red)",
+                    opacity: deleteConfirmText === "DELETE" ? 1 : 0.6,
+                  }}
+                >
+                  {deleting ? "Deleting…" : "Permanently delete account"}
+                </button>
               </div>
             </div>
           )}

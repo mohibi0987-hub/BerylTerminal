@@ -69,6 +69,40 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Illustrative "market summary" cards, same layout pattern as
+          TradingView's own dashboard — deliberately static/CSS-drawn like
+          the hero mock above rather than wired to live data. This page is
+          public and unauthenticated, and live quotes here would mean every
+          anonymous visitor (and every crawler) burning real Twelve Data
+          credits — the same quota that's already been exhausted once this
+          session from far lighter, authenticated use. */}
+      <div className="section" style={{ paddingBottom: 0 }}>
+        <div className="container">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+            {[
+              { label: "AAPL", price: "$254.32", change: "+0.85%", up: true, path: "M0,30 L15,22 30,26 45,14 60,18 75,8 90,12" },
+              { label: "BTC/USD", price: "$77,644", change: "+1.09%", up: true, path: "M0,28 L15,24 30,26 45,16 60,20 75,10 90,6" },
+              { label: "DXY", price: "99.58", change: "-0.36%", up: false, path: "M0,10 L15,14 30,12 45,20 60,18 75,26 90,24" },
+              { label: "NQ", price: "22,410", change: "+0.42%", up: true, path: "M0,24 L15,20 30,22 45,12 60,16 75,10 90,8" },
+            ].map((card) => (
+              <div key={card.label} style={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 10, padding: 16 }}>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>{card.label}</div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+                  <span className="mono" style={{ fontSize: 18, fontWeight: 700 }}>{card.price}</span>
+                  <span className="mono" style={{ fontSize: 12, fontWeight: 700, color: card.up ? "var(--green)" : "var(--red)" }}>{card.change}</span>
+                </div>
+                <svg viewBox="0 0 90 34" style={{ width: "100%", height: 34 }} preserveAspectRatio="none">
+                  <path d={card.path} fill="none" stroke={card.up ? "var(--green)" : "var(--red)"} strokeWidth="2" />
+                </svg>
+              </div>
+            ))}
+          </div>
+          <div style={{ textAlign: "center", marginTop: 16, fontSize: 11.5, color: "var(--faint)" }}>
+            Illustrative — sign in for live quotes across your own watchlist and every connected broker.
+          </div>
+        </div>
+      </div>
+
       <div className="trust-strip" id="brokers">
         <div className="container">
           {BROKERS.map((b) => <span key={b.id}>{b.name}</span>)}

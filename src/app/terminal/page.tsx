@@ -6,6 +6,7 @@ import { Chart } from "@/components/Chart";
 import { OrderTicket } from "@/components/OrderTicket";
 import { BrokerConnectModal, type Broker } from "@/components/BrokerConnectModal";
 import { Watchlist } from "@/components/Watchlist";
+import { AlertsPanel } from "@/components/AlertsPanel";
 import { SymbolSearch } from "@/components/SymbolSearch";
 import { AppNav } from "@/components/AppNav";
 
@@ -349,6 +350,7 @@ export default function Terminal() {
         </div>
         <div className="term-sidebar" style={{ borderLeft: "1px solid var(--border)", padding: 14, background: "var(--bg-soft)", display: "flex", flexDirection: "column", gap: 18, overflowY: "auto" }}>
           <Watchlist onSelectSymbol={openSymbol} />
+          <AlertsPanel symbol={symbol} />
           <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
             <OrderTicket symbol={symbol} broker={broker} mode={mode} onOrderPlaced={handleOrderPlaced} />
           </div>
