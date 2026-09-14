@@ -25,15 +25,46 @@ type Connection = {
 };
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<"general" | "appearance" | "brokers">("general");
+  const [tab, setTab] = useState<"general" | "appearance" | "billing" | "brokers">("general");
   const [connections, setConnections] = useState<Connection[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [colors, setColors] = useState<CandleColors>(DEFAULT_CANDLE_COLORS);
+  const [billingInfo, setBillingInfo] = useState<{ plan: string; subscriptionStatus: string | null; hasBillingAccount: boolean } | null>(null);
+  const [billingError, setBillingError] = useState<string | null>(null);
+  const [portalBusy, setPortalBusy] = useState(false);
 
   useEffect(() => {
     setColors(getCandleColors());
   }, []);
+
+  useEffect(() => {
+    if (tab !== "billing") return;
+    fetch("/api/billing")
+      .then(async (res) => {
+        let data: any = null;
+        try { data = await res.json(); } catch { /* non-JSON error body */ }
+        if (!res.ok) throw new Error(data?.error ?? `Couldn't load billing info (${res.status}).`);
+        setBillingInfo(data);
+      })
+      .catch((err) => setBillingError(err.message));
+  }, [tab]);
+
+  async function openBillingPortal() {
+    setPortalBusy(true);
+    setBillingError(null);
+    try {
+      const res = await fetch("/api/billing-portal", { method: "POST" });
+      let data: any = null;
+      try { data = await res.json(); } catch { /* non-JSON error body */ }
+      if (!res.ok || !data?.url) { setBillingError(data?.error ?? `Couldn't open billing portal (${res.status}).`); return; }
+      window.location.href = data.url;
+    } catch {
+      setBillingError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setPortalBusy(false);
+    }
+  }
 
   function updateColor(key: keyof CandleColors, value: string) {
     const next = { ...colors, [key]: value };
@@ -87,6 +118,7 @@ export default function SettingsPage() {
           {[
             { key: "general" as const, label: "General" },
             { key: "appearance" as const, label: "Appearance" },
+            { key: "billing" as const, label: "Plan & Billing" },
             { key: "brokers" as const, label: "Connected Brokers" },
           ].map((t) => (
             <button
@@ -151,6 +183,38 @@ export default function SettingsPage() {
                 >
                   Reset to defaults
                 </button>
+              )}
+            </div>
+          )}
+
+          {tab === "billing" && (
+            <div>
+              <h1 className="disp" style={{ fontSize: 20, marginBottom: 6 }}>Plan &amp; Billing</h1>
+              <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 20 }}>
+                Your plan only ever changes once Stripe confirms a payment or cancellation — never instantly from this page.
+              </p>
+              {billingError && <div style={{ fontSize: 12.5, color: "var(--red)", marginBottom: 14 }}>{billingError}</div>}
+              {!billingInfo && !billingError && <div style={{ fontSize: 13, color: "var(--faint)" }}>Loading…</div>}
+              {billingInfo && (
+                <div style={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 10, padding: 20 }}>
+                  <div style={{ fontSize: 13, color: "var(--muted)" }}>Current plan</div>
+                  <div className="disp" style={{ fontSize: 22, fontWeight: 700, margin: "4px 0 14px" }}>
+                    {billingInfo.plan === "FREE" ? "Free" : billingInfo.plan.charAt(0) + billingInfo.plan.slice(1).toLowerCase()}
+                  </div>
+                  {billingInfo.subscriptionStatus && (
+                    <div style={{ fontSize: 12, color: "var(--faint)", marginBottom: 14 }}>Status: {billingInfo.subscriptionStatus}</div>
+                  )}
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <a href="/pricing" className="btn btn-primary" style={{ textDecoration: "none" }}>
+                      {billingInfo.plan === "FREE" ? "Upgrade" : "Change plan"}
+                    </a>
+                    {billingInfo.hasBillingAccount && (
+                      <button onClick={openBillingPortal} disabled={portalBusy} className="btn btn-ghost">
+                        {portalBusy ? "Opening…" : "Manage billing"}
+                      </button>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )}

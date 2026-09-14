@@ -79,6 +79,14 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Stripe subscription state — the source of truth is always Stripe's own
+  // webhook events, never set directly by a client-facing "upgrade" button.
+  // See src/app/api/webhooks/stripe/route.ts.
+  stripeCustomerId     String?  @unique
+  stripeSubscriptionId String?  @unique
+  plan                 Plan     @default(FREE)
+  subscriptionStatus   String?  // Stripe's own status string: "active", "past_due", "canceled", etc.
+
   workspaces        Workspace[]
   watchlists        Watchlist[]
   brokerConnections BrokerConnection[]
@@ -86,6 +94,14 @@ model User {
   drawings          Drawing[]
   indicatorConfigs  IndicatorConfiguration[]
   auditEvents       AuditEvent[]
+}
+
+enum Plan {
+  FREE
+  PRO
+  ADVANCED
+  ELITE
+  REDBERYL
 }
 
 model Workspace {

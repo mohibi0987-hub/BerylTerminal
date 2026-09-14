@@ -71,7 +71,33 @@ const TIERS: Tier[] = [
 export default function PricingPage() {
   const [activeId, setActiveId] = useState("pro");
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const active = TIERS.find((t) => t.id === activeId)!;
+
+  async function upgrade() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: active.id.toUpperCase() }),
+      });
+      let data: any = null;
+      try { data = await res.json(); } catch { /* non-JSON error body */ }
+      if (!res.ok || !data?.url) {
+        if (res.status === 401) { window.location.href = "/login"; return; }
+        setError(data?.error ?? `Couldn't start checkout (${res.status}).`);
+        return;
+      }
+      window.location.href = data.url; // real Stripe Checkout
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="site">
@@ -144,16 +170,21 @@ export default function PricingPage() {
               </div>
 
               <button
+                onClick={upgrade}
+                disabled={busy}
                 style={{
                   width: "100%", padding: 14, borderRadius: 8, border: "none", fontWeight: 700, fontSize: 14, cursor: "pointer",
                   background: active.theme.accent, color: active.id === "redberyl" ? "#fff" : "#04150F",
                 }}
               >
-                Upgrade to {active.name}
+                {busy ? "Starting checkout…" : `Upgrade to ${active.name}`}
               </button>
-              <div style={{ fontSize: 11, color: "var(--faint)", textAlign: "center", marginTop: 12 }}>
-                Checkout isn't wired up yet — this needs a real Stripe account connected before it can take a real card.
-              </div>
+              {error && <div style={{ fontSize: 12, color: "var(--red)", textAlign: "center", marginTop: 10 }}>{error}</div>}
+              {billing === "annual" && (
+                <div style={{ fontSize: 11, color: "var(--faint)", textAlign: "center", marginTop: 12 }}>
+                  Checkout currently bills monthly regardless of this toggle — annual pricing isn't wired to a separate Stripe price yet.
+                </div>
+              )}
             </div>
           </div>
         </div>

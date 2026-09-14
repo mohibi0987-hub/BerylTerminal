@@ -2,7 +2,12 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // Public: marketing homepage, legal pages, and the sign-in page itself.
 // Everything else (the terminal + all /api routes) requires a session.
-const isPublicRoute = createRouteMatcher(["/", "/login(.*)", "/privacy", "/terms", "/pricing"]);
+// Public: marketing homepage, legal pages, the sign-in page, the pricing page,
+// and the Stripe webhook — that last one is called by Stripe's own servers,
+// never by a logged-in browser, so it can't require a Clerk session. It's
+// still safe: the webhook route verifies Stripe's signature itself before
+// trusting anything in the request body.
+const isPublicRoute = createRouteMatcher(["/", "/login(.*)", "/privacy", "/terms", "/pricing", "/api/webhooks/stripe"]);
 
 // BerylTerminal and TradeBeryl share one Clerk application so a person is
 // signed in on both once they've signed in on either. TradeBeryl is the
