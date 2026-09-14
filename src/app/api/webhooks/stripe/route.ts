@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { stripe, planFromPriceId } from "@/lib/stripe";
+import { stripe, berylPlanFromSubscription } from "@/lib/stripe";
 
 // This is the ONLY place a user's `plan` field is ever written. The checkout
 // and billing-portal routes just redirect to Stripe — they never touch the
 // plan themselves. That matters: a client-side "set my plan to X" button is
 // a free-upgrade loophole the moment real money is involved, so the plan
 // only ever changes once Stripe itself confirms it happened.
+//
+// BerylTerminal and TradeBeryl share one Stripe account/customer so a
+// bundle subscription spanning both products is possible — which means
+// this endpoint receives events for TradeBeryl-only purchases too, not
+// just BerylTerminal's. Every handler below checks whether the event
+// actually concerns one of BerylTerminal's own prices before touching
+// anything; if it doesn't, the event is acknowledged and ignored rather
+// than treated as "no BerylTerminal plan" and wrongly reset to FREE.
 export async function POST(req: NextRequest) {
   const signature = req.headers.get("stripe-signature");
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -27,35 +35,58 @@ export async function POST(req: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as any;
         const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-        const priceId = subscription.items.data[0]?.price?.id;
+        const plan = berylPlanFromSubscription(subscription as any);
+        if (!plan) break; // this checkout was for a TradeBeryl-only price — not ours to touch
         await db.user.update({
           where: { stripeCustomerId: session.customer as string },
-          data: {
-            stripeSubscriptionId: subscription.id,
-            plan: planFromPriceId(priceId),
-            subscriptionStatus: subscription.status,
-          },
+          data: { stripeSubscriptionId: subscription.id, plan, subscriptionStatus: subscription.status },
         });
         break;
       }
       case "customer.subscription.updated": {
         const subscription = event.data.object as any;
-        const priceId = subscription.items.data[0]?.price?.id;
-        await db.user.update({
-          where: { stripeCustomerId: subscription.customer as string },
-          data: {
-            plan: subscription.status === "active" || subscription.status === "trialing" ? planFromPriceId(priceId) : "FREE",
-            subscriptionStatus: subscription.status,
-          },
-        });
+        const plan = berylPlanFromSubscription(subscription);
+        if (plan) {
+          // A BerylTerminal price is present on this subscription — this is
+          // definitely ours to act on, whether it's a fresh upgrade or a
+          // renewal/status change on an existing one.
+          await db.user.update({
+            where: { stripeCustomerId: subscription.customer as string },
+            data: {
+              stripeSubscriptionId: subscription.id,
+              plan: subscription.status === "active" || subscription.status === "trialing" ? plan : "FREE",
+              subscriptionStatus: subscription.status,
+            },
+          });
+        } else {
+          // No BerylTerminal price on this subscription right now. That's
+          // only meaningful to us if this is the exact subscription we were
+          // already tracking — meaning a BerylTerminal price used to be on
+          // it (a bundle) and was just removed, leaving only TradeBeryl's
+          // side. Any other subscription id is unrelated to us entirely.
+          const user = await db.user.findUnique({ where: { stripeCustomerId: subscription.customer as string } });
+          if (user?.stripeSubscriptionId === subscription.id) {
+            await db.user.update({
+              where: { stripeCustomerId: subscription.customer as string },
+              data: { plan: "FREE", subscriptionStatus: subscription.status, stripeSubscriptionId: null },
+            });
+          }
+        }
         break;
       }
       case "customer.subscription.deleted": {
         const subscription = event.data.object as any;
-        await db.user.update({
-          where: { stripeCustomerId: subscription.customer as string },
-          data: { plan: "FREE", subscriptionStatus: "canceled", stripeSubscriptionId: null },
-        });
+        const plan = berylPlanFromSubscription(subscription);
+        const user = await db.user.findUnique({ where: { stripeCustomerId: subscription.customer as string } });
+        // Act if this subscription had a BerylTerminal price on it, OR if it's
+        // the exact subscription we were tracking (covers the case where the
+        // deleted event's item list comes back empty).
+        if (plan || user?.stripeSubscriptionId === subscription.id) {
+          await db.user.update({
+            where: { stripeCustomerId: subscription.customer as string },
+            data: { plan: "FREE", subscriptionStatus: "canceled", stripeSubscriptionId: null },
+          });
+        }
         break;
       }
       // Other event types are intentionally ignored — only these three

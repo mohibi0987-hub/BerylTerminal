@@ -15,9 +15,26 @@ export const PLAN_PRICE_IDS: Record<"PRO" | "ADVANCED" | "ELITE" | "REDBERYL", s
   REDBERYL: process.env.STRIPE_PRICE_REDBERYL,
 };
 
-export function planFromPriceId(priceId: string | null | undefined): "PRO" | "ADVANCED" | "ELITE" | "REDBERYL" | "FREE" {
+export function planFromPriceId(priceId: string | null | undefined): "PRO" | "ADVANCED" | "ELITE" | "REDBERYL" | null {
   for (const [plan, id] of Object.entries(PLAN_PRICE_IDS)) {
     if (id && id === priceId) return plan as "PRO" | "ADVANCED" | "ELITE" | "REDBERYL";
   }
-  return "FREE";
+  return null; // no match — this price belongs to some other product (e.g. a TradeBeryl plan), not one of ours
+}
+
+// BerylTerminal and TradeBeryl share one Stripe account so a bundle
+// subscription spanning both products is possible — which means BOTH apps'
+// webhook endpoints receive every event on that account, not just the ones
+// for their own prices. Given a subscription (which may have several line
+// items if it's a bundle), this finds the one line item — if any — that's
+// actually one of BerylTerminal's own plans, and ignores everything else in
+// it. Returning null means "this event doesn't concern us at all" — the
+// caller must leave the user's plan untouched, never reset it to FREE just
+// because a price it doesn't recognize showed up.
+export function berylPlanFromSubscription(subscription: { items: { data: { price: { id: string } }[] } }): "PRO" | "ADVANCED" | "ELITE" | "REDBERYL" | null {
+  for (const item of subscription.items.data) {
+    const plan = planFromPriceId(item.price.id);
+    if (plan) return plan;
+  }
+  return null;
 }
