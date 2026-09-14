@@ -49,6 +49,17 @@ export default function Terminal() {
   const [bottomTab, setBottomTab] = useState<"positions" | "orders">("positions");
   const [orders, setOrders] = useState<any[] | null>(null);
 
+  // Opens with whatever symbol the Markets page (or any other link) passed
+  // via ?symbol= — read from window.location directly rather than
+  // useSearchParams(), since that hook requires a Suspense boundary this
+  // page doesn't have and isn't worth adding for one query param.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("symbol");
+    if (requested) openSymbol(requested.toUpperCase());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function refreshAccount(b: Broker = broker, m: "PAPER" | "LIVE" = mode) {
     const res = await fetch(`/api/account?broker=${b}&mode=${m}`);
     let json: any = null;

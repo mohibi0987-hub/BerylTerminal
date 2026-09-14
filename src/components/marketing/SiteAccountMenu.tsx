@@ -16,7 +16,7 @@ export function SiteAccountMenu() {
   return (
     <>
       <SignedIn>
-        <a href="/terminal" className="btn btn-ghost">Terminal</a>
+        <a href="/markets" className="btn btn-ghost">Terminal</a>
         <UserButton afterSignOutUrl="/" appearance={clerkAppearance}>
           <UserButton.MenuItems>
             <UserButton.Link label="General Settings" href="/settings" labelIcon={<span>⚙️</span>} />

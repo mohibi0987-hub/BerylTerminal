@@ -105,13 +105,13 @@ export default function SettingsPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#0A0E17", color: "var(--text)" }}>
       <div style={{ height: 54, display: "flex", alignItems: "center", gap: 16, padding: "0 16px", borderBottom: "1px solid var(--border)", background: "var(--bg-soft)" }}>
-        <a href="/terminal" className="disp" style={{ fontWeight: 700, fontSize: 18, display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: "var(--text)" }}>
+        <a href="/markets" className="disp" style={{ fontWeight: 700, fontSize: 18, display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: "var(--text)" }}>
           <span style={{ width: 10, height: 10, borderRadius: 3, background: "var(--green)", boxShadow: "0 0 12px rgba(45,212,167,.65)" }} />
           BerylTerminal
         </a>
         <span style={{ color: "var(--faint)" }}>/</span>
         <span style={{ color: "var(--muted)" }}>Settings</span>
-        <a href="/terminal" style={{ marginLeft: "auto", fontSize: 12.5, color: "var(--muted)", textDecoration: "none" }}>← Back to terminal</a>
+        <a href="/markets" style={{ marginLeft: "auto", fontSize: 12.5, color: "var(--muted)", textDecoration: "none" }}>← Back to Markets</a>
       </div>
 
       <div style={{ display: "flex", maxWidth: 900, margin: "0 auto", minHeight: "calc(100vh - 54px)" }}>

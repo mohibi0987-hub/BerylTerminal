@@ -34,7 +34,7 @@ export default function LoginPage() {
       const attempt = await signIn.create({ identifier: email, password });
       if (attempt.status === "complete") {
         await setActiveSignIn({ session: attempt.createdSessionId });
-        router.push("/terminal");
+        router.push("/markets");
         return;
       }
 
@@ -94,7 +94,7 @@ export default function LoginPage() {
         const attempt = await signIn.attemptSecondFactor({ strategy: "email_code", code });
         if (attempt.status === "complete") {
           await setActiveSignIn({ session: attempt.createdSessionId });
-          router.push("/terminal");
+          router.push("/markets");
           return;
         }
         setError("That code didn't work — check it and try again.");
@@ -103,7 +103,7 @@ export default function LoginPage() {
         const attempt = await signUp.attemptEmailAddressVerification({ code });
         if (attempt.status === "complete") {
           await setActiveSignUp({ session: attempt.createdSessionId });
-          router.push("/terminal");
+          router.push("/markets");
           return;
         }
         setError("That code didn't work — check it and try again.");

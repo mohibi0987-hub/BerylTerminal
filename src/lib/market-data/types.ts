@@ -15,6 +15,7 @@ export interface Bar {
 
 export interface MarketDataService {
   getQuote(symbol: string): Promise<Quote>;
+  getQuotes?(symbols: string[]): Promise<Quote[]>; // optional — implementers without real batch support can omit it and callers fall back to N getQuote() calls
   getBars(symbol: string, interval: string, outputSize?: number): Promise<Bar[]>;
   // Streaming is optional — check before relying on it, since it depends on your provider tier
   // (e.g. Twelve Data's free Basic plan only gets trial WebSocket access; full streaming needs Pro+).

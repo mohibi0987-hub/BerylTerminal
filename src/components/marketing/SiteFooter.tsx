@@ -23,7 +23,7 @@ export function SiteFooter() {
         <div className="col">
           <h4>Account</h4>
           <a href="/login">Sign in</a>
-          <a href="/terminal">Open terminal</a>
+          <a href="/markets">Open terminal</a>
           <a href={TRADEBERYL_URL}>TradeBeryl journal</a>
         </div>
         <div className="col">

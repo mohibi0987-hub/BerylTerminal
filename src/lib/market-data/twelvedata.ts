@@ -42,6 +42,47 @@ export class TwelveDataService implements MarketDataService {
     return quote;
   }
 
+  // Batch quotes for more than one symbol at once. Twelve Data's /price
+  // endpoint accepts a comma-separated symbol list and, when given more
+  // than one symbol, returns an object keyed by symbol instead of a single
+  // flat {price: "..."} — this method is what actually understands both
+  // shapes. Prior to this, callers (Watchlist, the Markets page) were
+  // joining symbols with commas and calling getQuote() directly, which only
+  // ever handled the single-symbol shape — a real, silent bug for anyone
+  // with more than one item in their watchlist.
+  async getQuotes(symbols: string[]): Promise<Quote[]> {
+    const uncached: string[] = [];
+    const results: Quote[] = [];
+    for (const symbol of symbols) {
+      const cached = getCached<Quote>(`quote:${symbol}`);
+      if (cached) results.push(cached); else uncached.push(symbol);
+    }
+    if (uncached.length === 0) return results;
+
+    const res = await fetch(`${REST_BASE}/price?symbol=${encodeURIComponent(uncached.join(","))}&apikey=${this.apiKey}`);
+    const json = await res.json();
+    if (json.status === "error" || json.code) {
+      throw new Error(`Twelve Data error for ${uncached.join(",")}: ${json.message ?? JSON.stringify(json)}`);
+    }
+
+    if (uncached.length === 1) {
+      // Single-symbol shape even though we went through the batch path —
+      // Twelve Data only switches to the keyed shape once 2+ symbols are requested.
+      const quote: Quote = { symbol: uncached[0], price: parseFloat(json.price), timestamp: new Date().toISOString() };
+      setCached(`quote:${uncached[0]}`, quote, QUOTE_TTL_MS);
+      results.push(quote);
+    } else {
+      for (const symbol of uncached) {
+        const entry = json[symbol];
+        if (!entry || entry.status === "error") continue; // skip symbols Twelve Data couldn't resolve, rather than fail the whole batch
+        const quote: Quote = { symbol, price: parseFloat(entry.price), timestamp: new Date().toISOString() };
+        setCached(`quote:${symbol}`, quote, QUOTE_TTL_MS);
+        results.push(quote);
+      }
+    }
+    return results;
+  }
+
   async getBars(symbol: string, interval: string, outputSize = 100): Promise<Bar[]> {
     const cacheKey = `bars:${symbol}:${interval}:${outputSize}`;
     const cached = getCached<Bar[]>(cacheKey);
